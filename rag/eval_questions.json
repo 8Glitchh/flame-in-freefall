@@ -1,0 +1,240 @@
+[
+ {
+  "q": "What was the peak heat release rate of the 2-sided PMMA test in Saffire VI?",
+  "any": [
+   "3240"
+  ],
+  "type": "table"
+ },
+ {
+  "q": "What smoke concentration was used as the alarm threshold?",
+  "any": [
+   "2 mg/m3"
+  ],
+  "type": "paper"
+ },
+ {
+  "q": "What is the 1-hour SMAC limit for carbon monoxide?",
+  "any": [
+   "425 ppm"
+  ],
+  "type": "paper"
+ },
+ {
+  "q": "How fast did the flame length grow on the PMMA samples in the Saffire tests?",
+  "any": [
+   "0.22 to 0.38",
+   "Flame length growth rate (mm/s): 0.22"
+  ],
+  "type": "paper"
+ },
+ {
+  "q": "Why did the 1-sided samples stop growing earlier than the 2-sided ones?",
+  "any": [
+   "back side"
+  ],
+  "type": "paper"
+ },
+ {
+  "q": "What pressure and oxygen level was test VI-3 run at?",
+  "any": [
+   "VI-3: Material"
+  ],
+  "type": "table"
+ },
+ {
+  "q": "How long did it take for the alarm to trigger in test VI-4?",
+  "any": [
+   "VI-4: Material"
+  ],
+  "type": "table"
+ },
+ {
+  "q": "Which instrument measured the aerosol mass concentration?",
+  "any": [
+   "DustTrak",
+   "light scattering"
+  ],
+  "type": "paper"
+ },
+ {
+  "q": "How much did more oxygen speed up flame growth on the 2-sided samples?",
+  "any": [
+   "73%"
+  ],
+  "type": "paper"
+ },
+ {
+  "q": "Does flame growth accelerate in low gravity like it does on Earth?",
+  "any": [
+   "linear"
+  ],
+  "type": "paper"
+ },
+ {
+  "q": "What does the oxygen shadow do to flame spread?",
+  "any": [
+   "oxygen shadow"
+  ],
+  "type": "paper"
+ },
+ {
+  "q": "What fuels were tested in FLEX?",
+  "any": [
+   "Methanol (157), Heptane (117)"
+  ],
+  "type": "summary"
+ },
+ {
+  "q": "How long did the SIBAL sample burn in Saffire-I?",
+  "any": [
+   "Burn Time (s): 420",
+   "burn time (s): 420"
+  ],
+  "type": "table"
+ },
+ {
+  "q": "What air flow speed was used in Saffire-I?",
+  "any": [
+   "20 cm/s",
+   "Air Flow (cm/s): 20"
+  ],
+  "type": "any"
+ },
+ {
+  "q": "In Saffire-II, how did burn length in microgravity compare with normal gravity?",
+  "any": [
+   "micro g burn length",
+   "Microgravity (0 g) Burn Length"
+  ],
+  "type": "table"
+ },
+ {
+  "q": "What is the DOI of the Saffire-I dataset?",
+  "any": [
+   "10.60555/0t15-1z43"
+  ],
+  "type": "metadata"
+ },
+ {
+  "q": "What material was burned in Saffire-I and Saffire-III?",
+  "any": [
+   "cotton",
+   "SIBAL"
+  ],
+  "type": "any"
+ },
+ {
+  "q": "What is the objective of the Burning Rate Emulator?",
+  "any": [
+   "Burning Rate Emulator",
+   "BRE"
+  ],
+  "type": "factsheet"
+ },
+ {
+  "q": "What is a smoke point and why does SPICE measure it?",
+  "any": [
+   "smoke point is a simple measurement",
+   "sooting propensity"
+  ],
+  "type": "factsheet"
+ },
+ {
+  "q": "What does SLICE study about flames?",
+  "any": [
+   "liftoff",
+   "lifted"
+  ],
+  "type": "factsheet"
+ },
+ {
+  "q": "Why was DAFT flown before SAME?",
+  "any": [
+   "P-Trak",
+   "in preparation for SAME"
+  ],
+  "type": "factsheet"
+ },
+ {
+  "q": "What does SAME measure about smoke?",
+  "any": [
+   "particulate size distribution",
+   "particle size"
+  ],
+  "type": "factsheet"
+ },
+ {
+  "q": "What range of oxygen mole fraction was used in the FLEX tests?",
+  "any": [
+   "o2 (%): from",
+   "O2 initial mole fraction: from"
+  ],
+  "type": "summary"
+ },
+ {
+  "q": "What were the materials burned in BASS-II?",
+  "any": [
+   "pmma"
+  ],
+  "type": "any"
+ },
+ {
+  "q": "What was the extinction diameter in CFI test 1355?",
+  "any": [
+   "flex number: 1355; local time",
+   "Flex Number: 1355; D0",
+   "test 1355. Gravity"
+  ],
+  "type": "spreadsheet"
+ },
+ {
+  "q": "What happened in the Apollo 1 fire?",
+  "any": [
+   "Apollo 1"
+  ],
+  "type": "background"
+ },
+ {
+  "q": "How does fire suppression in space differ from on Earth?",
+  "any": [
+   "suppression of fires in space",
+   "extinguish"
+  ],
+  "type": "factsheet"
+ },
+ {
+  "q": "How many tests were run in SPICE?",
+  "any": [
+   "experiment table: 435 tests",
+   "experiment table: 469 tests"
+  ],
+  "type": "summary"
+ },
+ {
+  "q": "What is the goal of the BASS experiment?",
+  "any": [
+   "objectives for BASS",
+   "investigation examines",
+   "BASS (Burning and Suppression of Solids) Investigation"
+  ],
+  "type": "any"
+ },
+ {
+  "q": "What is the hypothesis of the Saffire-I investigation?",
+  "any": [
+   "PSI-98) – hypothesis"
+  ],
+  "type": "metadata"
+ },
+ {
+  "q": "What is the best pizza place in Amman?",
+  "expect": "not_found",
+  "type": "out_of_scope"
+ },
+ {
+  "q": "Who won the 2022 football World Cup?",
+  "expect": "not_found",
+  "type": "out_of_scope"
+ }
+]

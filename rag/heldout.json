@@ -1,0 +1,22 @@
+[
+ {"q":"What was the flame spread rate of sample 2-6 in Saffire-II?","any":["2.6"]},
+ {"q":"Which FLEX identifier belongs to FLEX test 73?","any":["193F001"]},
+ {"q":"What ignition power was used for the Saffire-I samples?","any":["182"]},
+ {"q":"How thick were the 1-sided PMMA samples in Saffire IV to VI?","any":["5 mm thick","0.5 cm thick"]},
+ {"q":"What was the free volume of the spacecraft in Saffire VI?","any":["16.7"]},
+ {"q":"Which inert gases diluted the atmosphere in the CFI droplet tests?","any":["helium"]},
+ {"q":"Who was the principal investigator for the thin PMMA film tests in BASS-II?","any":["Bhattacharjee"]},
+ {"q":"What hypotheses motivated the SAME smoke experiment?","any":["three hypotheses"]},
+ {"q":"What happened during the fire on the Mir space station?","any":["Mir"]},
+ {"q":"What was the maximum CO increase in test VI-2?","any":["122"]},
+ {"q":"How long were the SIBAL and cotton samples in Saffire IV-VI?","any":["50 cm long","500"]},
+ {"q":"Which BASS tests showed vapor jetting from the sample?","any":["vapor jetting"]},
+ {"q":"What flame spread rate did the SIBAL sample reach in Saffire IV?","any":["3.6"]},
+ {"q":"What is the DOI of the BASS-II dataset?","any":["10.60555/4qc4-de67"]},
+ {"q":"How hot did the cabin get during the Saffire VI PMMA fire?","any":["0.50","temperature increase"]},
+ {"q":"Did the Saffire-II silicone samples burn in microgravity?","any":["Insignificant","silicone"]},
+ {"q":"What is the weight loss rate of Teflon in the SAME tests?","any":["weight loss rate"]},
+ {"q":"What velocity of air was used in Saffire-III?","any":["30"]},
+ {"q":"How do I bake sourdough bread?","expect":"not_found"},
+ {"q":"What is the capital of Australia?","expect":"not_found"}
+]
