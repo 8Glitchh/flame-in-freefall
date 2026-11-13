@@ -6,9 +6,15 @@ from collections import Counter
 from pathlib import Path
 
 import pymupdf
+from sentence_transformers import SentenceTransformer
 
 HERE = Path(__file__).resolve().parent
 PDF = HERE.parent / "data" / "papers" / "ICES-2026-577.pdf"
+EMBED_MODEL = "BAAI/bge-small-en-v1.5"
+QUERY_PREFIX = "Represent this sentence for searching relevant passages: "
+RRF_K = 60
+KEYWORD_WEIGHT = 0.5
+MEANING_WEIGHT = 0.5
 
 COUNTRIES = r"(USA|France|Germany|Japan|Russia|Netherlands|Slovenia|Sweden|Italy|Canada|UK|Belgium|Spain)"
 AFFILIATION = re.compile(rf",\s*{COUNTRIES}\b")
@@ -136,21 +142,49 @@ class BM25:
         return out
 
 
+class Dense:
+    def __init__(self, chunks):
+        self.model = SentenceTransformer(EMBED_MODEL)
+        texts = [c["text"] for c in chunks]
+        self.vectors = self.model.encode(texts, normalize_embeddings=True)
+
+    def scores(self, question):
+        q = self.model.encode(QUERY_PREFIX + question, normalize_embeddings=True)
+        return self.vectors @ q
+
+
+class Index:
+    def __init__(self, chunks):
+        self.chunks = chunks
+        self.bm25 = BM25(chunks)
+        self.dense = Dense(chunks)
+
+
+def ranks(scores, only_positive=False):
+    order = sorted(range(len(scores)), key=lambda i: -scores[i])
+    return {i: r for r, i in enumerate(order, 1) if scores[i] > 0 or not only_positive}
+
+
 INDEX = None
 
 
 def get_index():
     global INDEX
     if INDEX is None:
-        INDEX = BM25(load_pdf(PDF))
+        INDEX = Index(load_pdf(PDF))
     return INDEX
 
 
 def search(question, k=6):
     index = get_index()
-    scores = index.scores(question)
-    order = sorted(range(len(scores)), key=lambda i: -scores[i])
-    return [index.chunks[i] for i in order[:k] if scores[i] > 0]
+    keyword = ranks(index.bm25.scores(question), only_positive=True)
+    meaning = ranks(index.dense.scores(question))
+    fused = {}
+    for ranking, weight in ((keyword, KEYWORD_WEIGHT), (meaning, MEANING_WEIGHT)):
+        for i, r in ranking.items():
+            fused[i] = fused.get(i, 0) + weight / (RRF_K + r)
+    order = sorted(fused, key=lambda i: -fused[i])
+    return [index.chunks[i] for i in order[:k]]
 
 
 def evaluate(path=HERE / "eval_questions.json"):
