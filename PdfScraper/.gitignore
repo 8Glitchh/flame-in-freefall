@@ -1,0 +1,13 @@
+.env
+*.pdf
+*.csv
+__pycache__/
+*.pyc
+.vscode/
+Converted/
+Converted2/
+outs/
+outs?
+*.txt
+.git/
+Summary.md
