@@ -218,3 +218,8 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+.env
+.cache/
+node_modules/
+PSI-26_Planned_Test_Matrix.xlsx
