@@ -22,11 +22,27 @@ QUERY_PREFIX = "Represent this sentence for searching relevant passages: "
 RRF_K = 60
 KEYWORD_WEIGHT = 0.5
 MEANING_WEIGHT = 0.5
+CANDIDATES = 40
+EXPERIMENT_BOOST = 0.02
+OTHER_EXPERIMENT_PENALTY = 0.005
+TEST_ID_BOOST = 0.02
+SUMMARY_BOOST = 0.03
+SPEC_PENALTY = 0.006
 
 SPEC_FILE = re.compile(r"SRD|ISRD|SORD|SCR|Requirements|Operations_Manual|DoD|DLD|Concept_Description|"
                        r"data_file_description", re.I)
 EXCLUDE = re.compile(r"MergeResult|Planned_Test_Matrix|Image_Directory_Nomenclature|DataOrganization|"
                      r"As_Run_Test_Matrix|BASS-II_Test\.Matrices", re.I)
+TABLE_INTENT = re.compile(r"\b(how many|which tests?|what tests?|list|range|conditions?|what (fuels?|materials?|pressures?)|"
+                          r"maximum|minimum|highest|lowest|average|tested|test matrix)\b", re.I)
+SPEC_INTENT = re.compile(r"\b(requirement|hardware|instrument|camera|sensor|rack|chamber|burner|design|"
+                         r"operat|procedure|igniter|apparatus|diagnostic|measur)", re.I)
+TEST_ID = re.compile(r"\b((?:I|II|III|IV|V|VI)-\d+|\d-\d+|S\d+|test (?:no\.? )?\d+|#\s?\d+)\b", re.I)
+SYNONYMS = {"heat release rate": "hrr", "hrr": "heat release rate", "o2": "oxygen", "oxygen": "o2",
+            "co2": "carbon dioxide", "carbon monoxide": "co", "pmma": "acrylic", "sibal": "cotton fiberglass",
+            "microgravity": "micro-g low-gravity", "extinction diameter": "dext", "extinguish": "extinction",
+            "spread": "propagation", "smoke": "aerosol particulate", "pressure": "kpa atm mbar",
+            "fast": "rate speed", "hot": "temperature", "fuel": "material sample"}
 FINDING_FIELDS = ("finding", "evidence", "safety_implication", "fuel_material", "oxygen_raw", "pressure_raw",
                   "flow_raw", "gravity", "spread_rate_raw", "peak_heat_release_rate_raw", "time_to_detection_raw",
                   "other_measurements", "sensors", "variables", "earth_application", "partial_g_applicability")
@@ -369,7 +385,7 @@ def load_findings(path):
     chunks = []
     with open(path, encoding="utf-8-sig") as f:
         for row in csv.DictReader(f):
-            if row.get("quote_found", "true").lower() != "true":
+            if row.get("quote_match", "") == "unverified":
                 continue
             facts = "; ".join(f"{k.replace('_raw', '').replace('_', ' ')}: {row[k]}" for k in FINDING_FIELDS if row.get(k))
             page = row.get("page", "")
@@ -426,6 +442,27 @@ def load_all(verbose=False):
     return chunks
 
 
+def header(c):
+    pages = f" p.{','.join(map(str, c['pages']))}" if c["pages"] else ""
+    about = f" · {', '.join(c['experiments'][:3])}" if c["experiments"] else ""
+    return f"{c['document']}{pages}{about}"
+
+
+def expand(question):
+    low = question.lower()
+    extra = [more for words, more in SYNONYMS.items() if re.search(rf"\b{re.escape(words)}\b", low)]
+    return question + " " + " ".join(extra)
+
+
+def test_ids(question):
+    return [re.sub(r"^(test (no\.? )?|#\s?)", "", m.lower()) for m in TEST_ID.findall(question)]
+
+
+def mentions_id(c, ids):
+    start = c["text"][:160].lower()
+    return any(re.search(rf"(?<![\w-]){re.escape(t)}(?![\w-])", start) for t in ids)
+
+
 def stem(w):
     if len(w) > 4 and not w[0].isdigit():
         if w.endswith("ies"):
@@ -447,7 +484,7 @@ def tokens(text):
 class BM25:
     def __init__(self, chunks, k1=1.5, b=0.75):
         self.chunks = chunks
-        self.docs = [Counter(tokens(c["text"])) for c in chunks]
+        self.docs = [Counter(tokens(header(c) + " " + c["text"])) for c in chunks]
         self.lengths = [sum(d.values()) for d in self.docs]
         self.avg = sum(self.lengths) / len(self.lengths)
         n = len(self.docs)
@@ -516,16 +553,53 @@ def get_index():
     return INDEX
 
 
-def search(question, k=6):
+def search(question, k=6, experiment=None):
     index = get_index()
-    keyword = ranks(index.bm25.scores(question), only_positive=True)
+    chunks = index.chunks
+    keyword = ranks(index.bm25.scores(expand(question)), only_positive=True)
     meaning = ranks(index.dense.scores(question))
     fused = {}
     for ranking, weight in ((keyword, KEYWORD_WEIGHT), (meaning, MEANING_WEIGHT)):
         for i, r in ranking.items():
             fused[i] = fused.get(i, 0) + weight / (RRF_K + r)
+
+    named = set(experiments_in(question))
+    if experiment:
+        named.add(experiment)
+    ids = test_ids(question)
+    table_question = bool(TABLE_INTENT.search(question))
+    spec_question = bool(SPEC_INTENT.search(question))
+
     order = sorted(fused, key=lambda i: -fused[i])
-    return [index.chunks[i] for i in order[:k]]
+    candidates = order[:CANDIDATES]
+    if ids:
+        candidates += [i for i, c in enumerate(chunks) if mentions_id(c, ids)]
+    if named:
+        inside = [i for i in order if named & set(chunks[i]["experiments"])]
+        candidates += inside[:CANDIDATES]
+        if table_question:
+            candidates += [i for i in inside if chunks[i]["kind"] == "table_summary"]
+
+    scored = {}
+    for i in candidates:
+        c = chunks[i]
+        if experiment and experiment not in c["experiments"]:
+            continue
+        about = bool(named & set(c["experiments"]))
+        s = fused.get(i, 0)
+        if named and about:
+            s += EXPERIMENT_BOOST
+        elif named and c["experiments"]:
+            s -= OTHER_EXPERIMENT_PENALTY
+        if ids and mentions_id(c, ids):
+            s += TEST_ID_BOOST
+        if table_question and not ids and about and c["kind"] == "table_summary":
+            s += SUMMARY_BOOST
+        if c["kind"] == "spec" and not spec_question:
+            s -= SPEC_PENALTY
+        scored[i] = s
+    best = sorted(scored, key=lambda i: -scored[i])
+    return [chunks[i] for i in best[:k]]
 
 
 def evaluate(path=HERE / "eval_questions.json"):
@@ -554,6 +628,6 @@ if __name__ == "__main__":
     elif sys.argv[1:2] == ["ask"]:
         print("about:", experiments_in(sys.argv[2]) or "no experiment named", "\n")
         for i, c in enumerate(search(sys.argv[2]), 1):
-            print(f"[{i}] {c['document']} p.{c['pages']} | {c['text'][:200]}\n")
+            print(f"[{i}] {header(c)} | {c['kind']} | {c['text'][:200]}\n")
     else:
         evaluate()
