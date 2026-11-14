@@ -1,3 +1,4 @@
+import csv
 import json
 import math
 import re
@@ -10,6 +11,7 @@ from sentence_transformers import SentenceTransformer
 
 HERE = Path(__file__).resolve().parent
 PDF = HERE.parent / "data" / "papers" / "ICES-2026-577.pdf"
+TESTS_CSV = HERE.parent / "data" / "psi_tests_clean.csv"
 EMBED_MODEL = "BAAI/bge-small-en-v1.5"
 QUERY_PREFIX = "Represent this sentence for searching relevant passages: "
 RRF_K = 60
@@ -19,6 +21,13 @@ MEANING_WEIGHT = 0.5
 COUNTRIES = r"(USA|France|Germany|Japan|Russia|Netherlands|Slovenia|Sweden|Italy|Canada|UK|Belgium|Spain)"
 AFFILIATION = re.compile(rf",\s*{COUNTRIES}\b")
 AUTHOR_LIST = re.compile(r"[a-z]\d{1,2},")
+SKIP_COLUMNS = {"record_id", "experiment_key", "flags", "psi_id", "experiment", "test_id", "test_id_basis",
+                "gravity", "source_file", "source_row", "row_kind", "duplicate_of_source_row", "source_page",
+                "source_table", "source_url", "reported_na_fields", "workbook_join", "workbook_file",
+                "workbook_sheet", "workbook_row"}
+UNITS = [("_pct", " (%)"), ("_kpa", " (kPa)"), ("_mm_s", " (mm/s)"), ("_cm_s", " (cm/s)"), ("_mg_s", " (mg/s)"),
+         ("_mg_m3", " (mg/m3)"), ("_ppm", " (ppm)"), ("_mmhg", " (mmHg)"), ("_mbar", " (mbar)"), ("_mm", " (mm)"),
+         ("_atm", " (atm)"), ("_w", " (W)"), ("_s", " (s)")]
 STOP = set("a an the of to in on for and or with by at from as is are was were be been it its this that "
            "what which who how why when where does do did can".split())
 
@@ -99,6 +108,82 @@ def load_pdf(path, max_tokens=220):
     return chunks
 
 
+def pretty(column):
+    column = column.replace("_per_", "_")
+    for end, unit in UNITS:
+        if column.endswith(end):
+            return column[:-len(end)].replace("_", " ") + unit
+    return column.replace("_", " ")
+
+
+def useful_columns(row):
+    return [c for c in row if c not in SKIP_COLUMNS and not c.endswith(("_approx", "_raw"))]
+
+
+def row_text(row, label):
+    facts = []
+    for column in useful_columns(row):
+        value = row[column]
+        if not value:
+            continue
+        if row.get(column + "_approx") == "True":
+            value = "~" + value
+        facts.append(f"{pretty(column)}: {value}")
+    text = f"{label} test {row['test_id']}. Gravity: {row['gravity'] or 'not stated'}. " + "; ".join(facts) + "."
+    if row["flags"]:
+        text += f" Data quality flags: {row['flags'].replace(';', ', ')}."
+    return text
+
+
+def to_number(value):
+    try:
+        return float(value)
+    except ValueError:
+        return None
+
+
+def summary_text(rows, label):
+    parts = [f"{label} experiment table: {len(rows)} tests."]
+    for column in useful_columns(rows[0]):
+        values = [r[column] for r in rows if r[column]]
+        if not values:
+            continue
+        numbers = [to_number(v) for v in values]
+        if None not in numbers:
+            parts.append(f"{pretty(column)}: from {min(numbers):g} to {max(numbers):g}.")
+            continue
+        counts = Counter(values)
+        if len(counts) <= 25 and counts.most_common(1)[0][1] > 1:
+            listed = ", ".join(f"{v} ({n})" for v, n in counts.most_common(10))
+            parts.append(f"{pretty(column)}: {listed}.")
+    return " ".join(parts)
+
+
+def load_tests(path):
+    groups = {}
+    with open(path, encoding="utf-8") as f:
+        for row in csv.DictReader(f):
+            if row["duplicate_of_source_row"] or row["row_kind"] != "data":
+                continue
+            groups.setdefault(row["experiment_key"], []).append(row)
+
+    chunks = []
+    for label, rows in groups.items():
+        for row in rows:
+            page = row["source_page"]
+            chunks.append({"text": row_text(row, label),
+                           "document": Path(row["source_file"]).name,
+                           "pages": [int(page)] if page.isdigit() else []})
+        chunks.append({"text": summary_text(rows, label),
+                       "document": "psi_tests_clean.csv",
+                       "pages": []})
+    return chunks
+
+
+def load_all():
+    return load_pdf(PDF) + load_tests(TESTS_CSV)
+
+
 def stem(w):
     if len(w) > 4 and not w[0].isdigit():
         if w.endswith("ies"):
@@ -171,7 +256,7 @@ INDEX = None
 def get_index():
     global INDEX
     if INDEX is None:
-        INDEX = Index(load_pdf(PDF))
+        INDEX = Index(load_all())
     return INDEX
 
 
@@ -204,7 +289,7 @@ def evaluate(path=HERE / "eval_questions.json"):
 
 if __name__ == "__main__":
     if sys.argv[1:] == ["chunks"]:
-        chunks = load_pdf(PDF)
+        chunks = load_all()
         print(len(chunks), "chunks\n")
         for c in chunks[:5]:
             print("pages", c["pages"], "|", c["text"][:250], "\n")

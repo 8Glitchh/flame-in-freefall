@@ -38,14 +38,16 @@
  {
   "q": "What pressure and oxygen level was test VI-3 run at?",
   "any": [
-   "VI-3: Material"
+   "VI-3: Material",
+   "SAFFIRE-VI test VI-3."
   ],
   "type": "table"
  },
  {
   "q": "How long did it take for the alarm to trigger in test VI-4?",
   "any": [
-   "VI-4: Material"
+   "VI-4: Material",
+   "SAFFIRE-VI test VI-4."
   ],
   "type": "table"
  },
