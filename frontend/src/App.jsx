@@ -56,38 +56,37 @@ export default function App() {
   }, [room, go]);
 
   useEffect(() => {
-    const EDGE_THRESHOLD = 12;
-  
-    function onMouseMove(e) {
-      const { innerWidth, innerHeight } = window;
-  
-      if (room === "chat") {
-        if (e.clientX >= innerWidth - EDGE_THRESHOLD) {
-          go("dashboard");
-        } else if (e.clientY <= EDGE_THRESHOLD) {
-          go("space");
-        }
-      }
-  
-      if (room === "dashboard") {
-        if (e.clientX <= EDGE_THRESHOLD) {
-          go("chat");
-        }
-      }
-  
-      if (room === "space") {
-        if (e.clientY >= innerHeight - EDGE_THRESHOLD) {
-          go("chat");
-        }
-      }
-    }
-  
-    window.addEventListener("mousemove", onMouseMove);
-  
-    return () => {
-      window.removeEventListener("mousemove", onMouseMove);
-    };
+    let timer = null;
 
+    function onMouseMove(e) {
+      const gap = 12;
+      let side = null;
+      if (e.clientX >= window.innerWidth - gap) side = "right";
+      else if (e.clientX <= gap) side = "left";
+      else if (e.clientY <= gap) side = "top";
+      else if (e.clientY >= window.innerHeight - gap) side = "bottom";
+
+      const arrow = arrows[room].find((a) => a.side === side);
+      if (!arrow || e.buttons) {
+        clearTimeout(timer);
+        timer = null;
+        return;
+      }
+      if (!timer) timer = setTimeout(() => go(arrow.to), 400);
+    }
+
+    function onLeave() {
+      clearTimeout(timer);
+      timer = null;
+    }
+
+    window.addEventListener("mousemove", onMouseMove);
+    document.addEventListener("mouseleave", onLeave);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener("mousemove", onMouseMove);
+      document.removeEventListener("mouseleave", onLeave);
+    };
   }, [room, go]);
 
   return (
