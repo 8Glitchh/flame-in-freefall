@@ -1,0 +1,368 @@
+[
+  {
+    "id": "apollo-1",
+    "title": "Apollo 1: when oxygen turned a spark into a fire",
+    "story": "On 27 January 1967, during a launch rehearsal, fire swept through the Apollo 1 command module. The sealed cabin was filled with pure oxygen at 16.7 psi and held many flammable materials, so the fire spread in seconds. The inner hatch opened inward, the fire's pressure held it shut, and Gus Grissom, Ed White and Roger Chaffee died within minutes.",
+    "lesson": "NASA stopped using pure oxygen in ground tests, added a quick-opening hatch, redesigned the wiring, removed many flammable materials and created an independent safety review office. No American flew in space for 21 months.",
+    "data_says": "In Saffire IV-VI, raising oxygen by 0.08 mole fraction made flames spread 73% faster on 2-sided samples, even though pressure dropped 45%.",
+    "keywords": [
+      "oxygen",
+      "o2",
+      "pure oxygen",
+      "enriched",
+      "flammab",
+      "material",
+      "ignit",
+      "spark",
+      "hatch",
+      "velcro",
+      "apollo 1"
+    ],
+    "experiments": [
+      "SAFFIRE-IV",
+      "SAFFIRE-V",
+      "SAFFIRE-VI",
+      "BASS",
+      "BASS-II"
+    ],
+    "source": {
+      "name": "NASA Johnson Space Center History Office: Day of Remembrance",
+      "url": "https://ntrs.nasa.gov/api/citations/20180001501/downloads/20180001501.pdf"
+    }
+  },
+  {
+    "id": "apollo-13",
+    "title": "Apollo 13: a fire nobody saw",
+    "story": "In April 1970, an oxygen tank on Apollo 13 exploded on the way to the Moon. Before launch, its heater had been run at 65 V when the thermostat was only rated for 28 V; the heater likely reached about 1,000 F and damaged the Teflon insulation on the wires. In flight, a spark in that insulation started a fire inside the oxygen tank.",
+    "lesson": "Later Apollo missions got a third oxygen tank, upgraded thermostats, no stirring fans inside the tank, and wiring sheathed in stainless steel.",
+    "data_says": "SAME heated Teflon in microgravity and found its smoke is made mostly of particles smaller than 1 micron, which matters because smoke detectors react differently to different particle sizes.",
+    "keywords": [
+      "teflon",
+      "wire",
+      "wiring",
+      "insulation",
+      "electrical",
+      "short circuit",
+      "overheat",
+      "heater",
+      "tank",
+      "apollo 13"
+    ],
+    "experiments": [
+      "SAME",
+      "SAME-R"
+    ],
+    "source": {
+      "name": "NASA: 50 years ago, the Apollo 13 Review Board report",
+      "url": "https://www.nasa.gov/history/50-years-ago-apollo-13-review-board-report"
+    }
+  },
+  {
+    "id": "mir-1997",
+    "title": "Mir 1997: fighting a fire with no up or down",
+    "story": "On 24 February 1997, an oxygen-generating canister caught fire on the Mir space station with six crew aboard, including NASA astronaut Jerry Linenger. A flame about three feet long, throwing sparks and molten metal, burned for several minutes and blocked the way to one of the escape capsules. The crew put on oxygen masks; Linenger held a crewmate in place while he sprayed foam, because there was no gravity to anchor him.",
+    "lesson": "NASA calls it the worst in-orbit fire in spaceflight history. Crew emergency training and the way oxygen canisters are prepared were changed, and the ISS now relies on other oxygen generators, keeping canisters only as a backup with extra safety measures.",
+    "data_says": "In Saffire VI test VI-4, the smoke reached the 2 mg/m3 alarm threshold after 1603 seconds, and that threshold is used to judge whether a fire is detected before carbon monoxide becomes dangerous.",
+    "keywords": [
+      "smoke",
+      "extinguish",
+      "suppress",
+      "detect",
+      "alarm",
+      "mir",
+      "canister",
+      "crew",
+      "mask",
+      "oxygen generator"
+    ],
+    "experiments": [
+      "FLEX",
+      "FLEX-2",
+      "SAFFIRE-VI",
+      "SAME",
+      "SAME-R",
+      "DAFT"
+    ],
+    "source": {
+      "name": "NASA: 25 years ago, fire aboard space station Mir",
+      "url": "https://www.nasa.gov/feature/25-years-ago-fire-aboard-space-station-mir"
+    }
+  },
+  {
+    "id": "fans-off",
+    "title": "Why turning off the fans isn't always enough",
+    "story": "On a spacecraft, step one in fighting a fire is to shut off the ventilation, because without gravity there is no rising hot air to feed the flame fresh oxygen; only the fans do that.",
+    "lesson": "BRE showed this rule can fail: materials like PMMA and nylon kept burning steadily in microgravity with no air flow at all, especially in the oxygen-rich atmospheres planned for future spacecraft.",
+    "data_says": "The Burning Rate Emulator (ACME BRE) tested NASA's planned cabin atmospheres: 14.7 psia with 21% O2, 10.2 psia with 26.5% O2, and 8.2 psia with 34% O2.",
+    "keywords": [
+      "ventilat",
+      "fan",
+      "air flow",
+      "airflow",
+      "quiescent",
+      "burning rate",
+      "no flow",
+      "elevated oxygen"
+    ],
+    "experiments": [
+      "ACME-BRE"
+    ],
+    "source": {
+      "name": "NASA PSI: ACME Burning Rate Emulator (PSI-20)",
+      "url": "https://psi.nasa.gov/physci/repo/data/investigations/PSI-20"
+    }
+  },
+  {
+    "id": "moon-mars-air",
+    "title": "Moon and Mars habitats will breathe riskier air",
+    "story": "Future spacecraft and habitats for the Moon and Mars are being designed with lower cabin pressure and more oxygen than the ISS. But extra oxygen makes materials burn more easily.",
+    "lesson": "Fire limits measured in normal ISS air don't automatically apply to these new atmospheres, and fire data in Moon (1/6 g) or Mars (3/8 g) gravity are very limited. That is why our app brackets them between the 0 g and 1 g results instead of guessing.",
+    "data_says": "The atmospheres NASA is considering go up to 34% oxygen at 8.2 psia, compared with 21% oxygen at 14.7 psia on the ISS.",
+    "keywords": [
+      "moon",
+      "mars",
+      "lunar",
+      "habitat",
+      "rover",
+      "partial",
+      "artemis",
+      "gateway",
+      "exploration",
+      "34%",
+      "low pressure"
+    ],
+    "experiments": [
+      "ACME-BRE",
+      "SAFFIRE-IV",
+      "SAFFIRE-V",
+      "SAFFIRE-VI"
+    ],
+    "source": {
+      "name": "NASA PSI: ACME Burning Rate Emulator (PSI-20)",
+      "url": "https://psi.nasa.gov/physci/repo/data/investigations/PSI-20"
+    }
+  },
+  {
+    "id": "saffire-why",
+    "title": "Why NASA set fires on purpose",
+    "story": "You can't start a big fire on the ISS with people on board. So for Saffire, NASA put the experiment inside an empty Cygnus cargo ship and lit real spacecraft materials only after it had left the station.",
+    "lesson": "For the first time, engineers could watch a realistic, spacecraft-sized fire in microgravity and check whether their material-selection rules really work.",
+    "data_says": "Saffire-I burned SIBAL cloth (75% cotton, 25% fiberglass) in a 20 cm/s air flow; Saffire-III repeated it at 30 cm/s.",
+    "keywords": [
+      "saffire",
+      "cygnus",
+      "large",
+      "realistic",
+      "spacecraft fire",
+      "cargo",
+      "material selection"
+    ],
+    "experiments": [
+      "SAFFIRE-I",
+      "SAFFIRE-II",
+      "SAFFIRE-III",
+      "SAFFIRE-IV",
+      "SAFFIRE-V",
+      "SAFFIRE-VI"
+    ],
+    "source": {
+      "name": "NASA: The flame of discovery grows as Saffire sets new fires in space",
+      "url": "https://nasa.gov/feature/glenn/2020/the-flame-of-discovery-grows-as-saffire-sets-new-fires-in-space"
+    }
+  },
+  {
+    "id": "air-tanks",
+    "title": "From spaceships to firefighters' backs",
+    "story": "Until the 1970s, firefighters carried heavy all-metal air tanks. NASA's work on composite overwrapped pressure vessels for spacecraft led to breathing tanks that are about 60% lighter and can hold air at higher pressure.",
+    "lesson": "Space fire-safety research doesn't stay in space: lighter tanks let firefighters work longer and move faster.",
+    "data_says": "FLEX's own impact statement says its results can advance fire safety in confined environments on Earth, not just in spacecraft.",
+    "keywords": [
+      "breathing",
+      "air tank",
+      "pressure vessel",
+      "spinoff",
+      "everyday",
+      "earth benefit",
+      "on earth"
+    ],
+    "experiments": [
+      "FLEX",
+      "FLEX-2"
+    ],
+    "source": {
+      "name": "NASA Technology Transfer: NASA technology fights wildfires",
+      "url": "https://technology.nasa.gov/nasa-technology-fights-wildfires"
+    }
+  },
+  {
+    "id": "tiny-detector",
+    "title": "A spacecraft smoke sensor that fits in your hand",
+    "story": "Smoke in space is expected to look different from smoke on Earth, because particles grow differently without gravity. NASA developed a palm-sized aerosol sensor, MPASS, originally for spacecraft fire detection, that can measure particles down to the nanometer scale.",
+    "lesson": "It is now being adapted for drones and for monitoring first responders' health during wildfires.",
+    "data_says": "SAME and SAME-R measured smoke particle sizes from spacecraft materials in microgravity so that future fire detectors are tuned to real space smoke.",
+    "keywords": [
+      "aerosol",
+      "particle",
+      "particulate",
+      "detector",
+      "sensor",
+      "size distribution",
+      "dusttrak",
+      "p-trak",
+      "smoke"
+    ],
+    "experiments": [
+      "SAME",
+      "SAME-R",
+      "DAFT"
+    ],
+    "source": {
+      "name": "NASA Technology Transfer: NASA technology fights wildfires",
+      "url": "https://technology.nasa.gov/nasa-technology-fights-wildfires"
+    }
+  },
+  {
+    "id": "cool-flames",
+    "title": "The fire that looked out, but wasn't",
+    "story": "On the ISS, FLEX burned tiny fuel droplets to see when flames go out. With heptane, the visible flame went out, but the droplet kept shrinking as if it were still burning. It was: a dim 'cool flame', far colder than a normal flame and almost invisible, kept burning on its own. It was a surprise discovery.",
+    "lesson": "A fire that looks extinguished in space may not be, and this discovery started a whole new line of NASA experiments (CFI and CFI-G). It also helps engineers design cleaner, more efficient engines on Earth.",
+    "data_says": "In FLEX, a 3.61 mm heptane droplet in air at 1.0 atm lost its hot flame at 2.84 mm, then kept burning in a long cool-flame stage. Methanol droplets never showed a cool flame.",
+    "keywords": [
+      "cool flame",
+      "extinguish",
+      "extinction",
+      "went out",
+      "invisible",
+      "heptane",
+      "droplet",
+      "radiative",
+      "re-ignit",
+      "reignit"
+    ],
+    "experiments": [
+      "FLEX",
+      "FLEX-2",
+      "CFI",
+      "CFI-G"
+    ],
+    "source": {
+      "name": "NASA: Combustion in Reduced Gravity Researcher's Guide",
+      "url": "https://www.nasa.gov/wp-content/uploads/2016/05/np-2015-10-034-jsc_combustion_in_reduced_gravity-iss-mini-book-011116-508.pdf"
+    }
+  },
+  {
+    "id": "fire-suits",
+    "title": "From Apollo suits to firefighter gear",
+    "story": "After the Apollo 1 fire, NASA looked for fabrics that would not burn easily. It contracted Celanese to develop textiles from PBI, a heat- and flame-resistant fiber, for space suits and spacecraft.",
+    "lesson": "In 1978, Project FIRES brought PBI into firefighting as the outer shell of turnout gear, and in 1994 the New York City Fire Department chose it for its firefighters' gear.",
+    "data_says": "BASS-II burned spacecraft fabrics in microgravity, including Nomex-III and a cotton-fiberglass blend (SIBAL), to see which ones are safest in space.",
+    "keywords": [
+      "fabric",
+      "cloth",
+      "textile",
+      "nomex",
+      "suit",
+      "clothing",
+      "fire-resistant",
+      "fire resistant",
+      "firefight",
+      "gear"
+    ],
+    "experiments": [
+      "BASS-II"
+    ],
+    "source": {
+      "name": "NASA Spinoff: PBI fire-resistant fiber",
+      "url": "https://spinoff.nasa.gov/node/10564"
+    }
+  },
+  {
+    "id": "flame-test",
+    "title": "Every material on board must pass a fire test",
+    "story": "Before anything flies to the ISS, from clothes to cables, NASA tests whether it keeps burning once lit. At NASA's White Sands Test Facility, samples are burned in the upward flame test (NASA-STD-6001 Test 1), with oxygen anywhere from 0 to 100% to mimic the worst case.",
+    "lesson": "The catch is that this test runs in normal Earth gravity. Fire behaves differently without gravity, which is exactly why NASA flew BASS and Saffire: to check whether the Earth test is safe enough for space.",
+    "data_says": "BASS notes that NASA's material selection is based on Test 1, which sorts materials by their 1-g behavior without considering low-gravity effects.",
+    "keywords": [
+      "material selection",
+      "standard",
+      "6001",
+      "test 1",
+      "flammability test",
+      "upward",
+      "certif",
+      "approved",
+      "safe material",
+      "selection"
+    ],
+    "experiments": [
+      "BASS",
+      "BASS-II",
+      "SAFFIRE-I",
+      "SAFFIRE-II",
+      "SAFFIRE-III"
+    ],
+    "source": {
+      "name": "NASA White Sands Test Facility: Flammability testing",
+      "url": "https://www.nasa.gov/centers-and-facilities/white-sands/flammability"
+    }
+  },
+  {
+    "id": "steady-fires",
+    "title": "Space fires grow fast, then stop growing",
+    "story": "On Earth, a fire on a big sheet of material usually keeps growing. Saffire showed something different in space: flames spread quickly, then settled at a steady size and burn rate. The size of the spacecraft also affected the fire more than NASA expected.",
+    "lesson": "Knowing how big a fire can get helps engineers plan detection, suppression and air cleanup for Orion and future Moon and Mars missions.",
+    "data_says": "In Saffire IV-VI, the 1-sided PMMA samples stopped growing earlier than the 2-sided ones, most likely because they lost heat through their back side.",
+    "keywords": [
+      "grow",
+      "growth",
+      "steady",
+      "plateau",
+      "limit",
+      "flame length",
+      "flame size",
+      "spread rate",
+      "bigger",
+      "larger"
+    ],
+    "experiments": [
+      "SAFFIRE-I",
+      "SAFFIRE-II",
+      "SAFFIRE-III",
+      "SAFFIRE-IV",
+      "SAFFIRE-V",
+      "SAFFIRE-VI"
+    ],
+    "source": {
+      "name": "NASA: The flame of discovery grows as Saffire sets new fires in space",
+      "url": "https://nasa.gov/feature/glenn/2020/the-flame-of-discovery-grows-as-saffire-sets-new-fires-in-space"
+    }
+  },
+  {
+    "id": "cleanup",
+    "title": "Cleaning the air after a space fire",
+    "story": "In space you can't open a window. After a fire, the crew is trapped with the smoke and carbon monoxide. In Saffire IV, after two burns, a carbon dioxide scrubber and a 'smoke eater' filter cleaned the air inside the Cygnus, and both were prototypes for NASA's Orion spacecraft.",
+    "lesson": "Surviving a fire isn't only about putting it out: the air has to become breathable again, fast.",
+    "data_says": "In Saffire VI test VI-2, carbon monoxide rose by up to 122 ppm.",
+    "keywords": [
+      "carbon monoxide",
+      "co2",
+      "scrubber",
+      "filter",
+      "smoke eater",
+      "clean",
+      "toxic",
+      "after the fire",
+      "orion",
+      "breathable"
+    ],
+    "experiments": [
+      "SAFFIRE-IV",
+      "SAFFIRE-V",
+      "SAFFIRE-VI"
+    ],
+    "source": {
+      "name": "NASA: The flame of discovery grows as Saffire sets new fires in space",
+      "url": "https://nasa.gov/feature/glenn/2020/the-flame-of-discovery-grows-as-saffire-sets-new-fires-in-space"
+    }
+  }
+]

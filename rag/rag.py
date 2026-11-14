@@ -753,6 +753,46 @@ def print_result(r):
         mark = "*" if s["n"] in r["cited"] else " "
         print(f" {mark}[{s['n']}] {s['label']} | {s['kind']}\n      {s['text'][:200]}")
 
+STORY_MIN_SCORE = 3
+STORY_GAP = 3
+
+
+def load_stories():
+    path = DATA / "stories.json"
+    return json.load(open(path, encoding="utf-8")) if path.exists() else []
+
+
+def story_score(story, question, answer, experiments):
+    q, a = question.lower(), (answer or "").lower()
+    score = 0
+    for word in story["keywords"]:
+        pattern = rf"\b{re.escape(word)}"
+        if re.search(pattern, q):
+            score += 3
+        elif re.search(pattern, a):
+            score += 1
+    if set(story["experiments"]) & experiments:
+        score += 1
+    return score
+
+
+def story_for(result, shown=(), answers_since_last=None):
+    if result["mode"] == "refused":
+        return None
+    if answers_since_last is not None and answers_since_last < STORY_GAP:
+        return None
+    experiments = set(result["experiments"])
+    for s in result["sources"]:
+        if s["n"] in result["cited"]:
+            experiments.update(s["experiments"])
+    best, best_score = None, STORY_MIN_SCORE - 1
+    for story in load_stories():
+        if story["id"] in shown:
+            continue
+        score = story_score(story, result["question"], result["answer"], experiments)
+        if score > best_score:
+            best, best_score = story, score
+    return best
 
 def evaluate(path=HERE / "eval_questions.json"):
     qs = json.load(open(path, encoding="utf-8"))
@@ -785,7 +825,12 @@ if __name__ == "__main__":
         for i, c in enumerate(search(sys.argv[2]), 1):
             print(f"[{i}] {header(c)} | {c['kind']} | {c['text'][:200]}\n")
     elif sys.argv[1:2] == ["ask"]:
-        print_result(ask(sys.argv[2]))
+        r = ask(sys.argv[2])
+        print_result(r)
+        s = story_for(r)
+        if s:
+            print(f"\n[ Why this matters: {s['title']} ]\n{s['story']}\nLesson: {s['lesson']}\n"
+                  f"Our data: {s['data_says']}\nSource: {s['source']['name']} ({s['source']['url']})")
     elif sys.argv[1:2] == ["heldout"]:
         evaluate(HERE / "heldout.json")
     elif sys.argv[1:2] == ["answers"]:
