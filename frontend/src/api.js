@@ -24,3 +24,27 @@ export async function getTests() {
   const res = await fetch(API + "/tests?o2_min=15&o2_max=40&psi_min=5&psi_max=16");
   return res.json();
 }
+
+async function get(path) {
+  const res = await fetch(API + path);
+  if (!res.ok) {
+    throw new Error(`Request failed (${res.status})`);
+  }
+  return res.json();
+}
+
+export function getData() {
+  return get("/data");
+}
+
+export function getFindings() {
+  return get("/findings");
+}
+
+export function getExperiments() {
+  return get("/experiments");
+}
+
+export function getExperiment(id) {
+  return get("/experiments/" + encodeURIComponent(id));
+}

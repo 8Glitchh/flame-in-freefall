@@ -115,6 +115,38 @@ def tests(o2_min: float = 0, o2_max: float = 100, psi_min: float = 0, psi_max: f
     return result
 
 
+def data_row(row):
+    kpa = number(row["pressure_kpa"])
+    o2 = number(row["o2_pct"]) or number(row.get("o2_initial_pct"))
+    return {
+        "id": row["record_id"],
+        "experiment": row["experiment"],
+        "psi_id": row["psi_id"],
+        "test": row["test_id"],
+        "fuel": row["fuel"] or row.get("fuel_sample_material", "") or row.get("material", ""),
+        "flame": row["flame_type"].lower(),
+        "o2": round(o2, 2) if o2 else None,
+        "o2_approx": row["o2_pct_approx"] == "True",
+        "kpa": round(kpa, 2) if kpa else None,
+        "psi": round(kpa * KPA_TO_PSI, 2) if kpa else None,
+        "psi_approx": row["pressure_kpa_approx"] == "True",
+        "flow": number(row["flow_cm_s"]),
+        "burn": number(row["burn_time_s"]),
+        "temp": round(number(row["tad_k"])) if number(row["tad_k"]) else None,
+        "flags": row["flags"],
+        "source": row["source_file"],
+        "row": row["source_row"],
+    }
+
+
+DATA_ROWS = [data_row(r) for r in TESTS if r["row_kind"] == "data"]
+
+
+@app.get("/data")
+def data():
+    return DATA_ROWS
+
+
 @app.get("/findings")
 def findings(theme: str = "", investigation: str = "", featured: bool = False):
     result = []
