@@ -1,8 +1,4 @@
-import { DOC, habitats, rank, tests } from "./tests.js";
-
-const name = `Saffire IV–VI paper (${DOC})`;
-const table = { name, ref: "Table 1" };
-const summary = { name, ref: "Results" };
+import { habitats, rank, tests } from "./tests.js";
 
 export function readScenario(text) {
   const s = text.toLowerCase();
@@ -34,31 +30,4 @@ export function pickCard(q) {
     return { type: "rank", scenario: moon, rows: rank(moon.o2, moon.psi, "prevention").slice(0, 3) };
   }
   return null;
-}
-
-export function ask(q) {
-  const s = q.toLowerCase();
-
-  if (s.includes("mars") || s.includes("partial") || s.includes("gravity")) {
-    return {
-      text: "There is no partial-gravity fire data in PSI yet. Every Saffire test ran in microgravity, so 0 g and Earth's 1 g are the only bounds we can give for Mars or the Moon [1].",
-      citations: [summary],
-      card: { type: "nodata" },
-    };
-  }
-
-  if (s.includes("smoke") || s.includes("alarm") || s.includes("co") || s.includes("detect")) {
-    return {
-      text: "Not always. A 2 mg/m³ smoke alarm triggered after CO had already passed the 100 ppm 24-hour limit in some tests [1]. PMMA was the worst case: VI-3 reached 338 ppm CO and the alarm only fired at 1037 s [2].",
-      citations: [summary, table],
-      card: { type: "alarm", rows: tests.map((t) => ({ id: t.id, alarm: t.alarm, co: t.co })) },
-    };
-  }
-
-  const moon = habitats[1];
-  return {
-    text: "Higher. Fires in low gravity grew linearly instead of accelerating, but 8 points more oxygen made 2-sided PMMA grow 73% faster, even at 45% lower pressure [1]. Here are the tests closest to Moon-base air, ranked by how well they match [2].",
-    citations: [summary, table],
-    card: { type: "rank", scenario: moon, rows: rank(moon.o2, moon.psi, "prevention").slice(0, 3) },
-  };
 }
