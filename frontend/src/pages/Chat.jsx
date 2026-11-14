@@ -1,6 +1,7 @@
 import { memo, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import Answer from "../components/Answer.jsx";
+import Story from "../components/Story.jsx";
 import MiniFlame from "../components/MiniFlame.jsx";
 import { fire } from "../components/Flame.jsx";
 import { pickCard, readScenario, setReply } from "../data/answers.js";
@@ -15,15 +16,15 @@ function isQuestion(text) {
   return /\?|^(what|how|why|is|was|does|do|can|which|when)\b/i.test(text);
 }
 
-async function getReply(text, changes, scenario) {
+async function getReply(text, changes, scenario, shown) {
   if (changes && !isQuestion(text)) return setReply({ ...scenario, ...changes });
   try {
-    const data = await askBackend(text);
+    const data = await askBackend(text, shown);
     const citations = data.citations.map((c) => ({
       name: c.doc.replace(/\.\w+$/, ""),
       ref: c.pages.length ? "p. " + c.pages.join(", ") : "data table",
     }));
-    return { text: data.answer, citations, card: pickCard(text) };
+    return { text: data.answer, citations, card: pickCard(text), story: data.story };
   } catch {
     return { text: "Chat couldn’t load an answer. Please try again.", citations: [] };
   }
@@ -53,6 +54,7 @@ function Chat({ openScenario, scenario, applyScenario }) {
   const [chats, setChats] = useState(loadChats);
   const [chatId, setChatId] = useState(null);
   const [showChats, setShowChats] = useState(false);
+  const [offer, setOffer] = useState(null);
 
   const scroller = useRef(null);
   const content = useRef(null);
@@ -92,6 +94,7 @@ function Chat({ openScenario, scenario, applyScenario }) {
     setMessages(chat.messages.map((m) => ({ ...m, old: true })));
     setChatId(chat.id);
     setShowChats(false);
+    setOffer(null);
     followBottom.current = true;
   }
 
@@ -100,11 +103,19 @@ function Chat({ openScenario, scenario, applyScenario }) {
     setMessages([]);
     setChatId(null);
     setShowChats(false);
+    setOffer(null);
   }
 
   function deleteChat(id) {
     saveChats(chats.filter((c) => c.id !== id));
     if (id === chatId) newChat();
+  }
+
+  function tellStory() {
+    unsaved.current = true;
+    followBottom.current = true;
+    setMessages((old) => [...old, { role: "story", story: offer }]);
+    setOffer(null);
   }
 
   function onScroll() {
@@ -122,15 +133,18 @@ function Chat({ openScenario, scenario, applyScenario }) {
     setInput("");
     setBusy(true);
     setFlare(flare + 1);
+    setOffer(null);
     followBottom.current = true;
     unsaved.current = true;
     if (!chatId) setChatId(Date.now());
     setMessages((old) => [...old, { role: "user", text }]);
     if (changes) applyScenario(changes);
 
-    getReply(text, changes, scenario).then((reply) => {
+    const shown = messages.filter((m) => m.story).map((m) => m.story.id);
+    getReply(text, changes, scenario, shown).then((reply) => {
       setMessages((old) => [...old, { role: "ai", ...reply }]);
       setBusy(false);
+      if (reply.story) setTimeout(() => setOffer(reply.story), 1500);
     });
   }
 
@@ -206,6 +220,8 @@ function Chat({ openScenario, scenario, applyScenario }) {
                   >
                     {m.text}
                   </motion.div>
+                ) : m.role === "story" ? (
+                  <Story key={i} story={m.story} />
                 ) : (
                   <Answer key={i} msg={m} openScenario={openScenario} />
                 )
@@ -225,7 +241,29 @@ function Chat({ openScenario, scenario, applyScenario }) {
         </AnimatePresence>
       </div>
 
-      <div className="w-full max-w-[760px]">
+      <div className="relative w-full max-w-[760px]">
+        <AnimatePresence>
+          {offer && (
+            <motion.div
+              className="story-offer"
+              initial={{ opacity: 0, y: 12, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 8, transition: { duration: 0.15 } }}
+              transition={{ type: "spring", stiffness: 320, damping: 28 }}
+            >
+              <div className="flex-1">
+                <p className="label">Want to hear a story?</p>
+                <p className="text-[14px] font-medium">{offer.title}</p>
+              </div>
+              <button className="story-no" onClick={() => setOffer(null)}>
+                Not now
+              </button>
+              <button className="story-yes" onClick={tellStory}>
+                Tell me
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
         <form
           className="composer"
           onSubmit={(e) => {

@@ -12,8 +12,8 @@ async function post(path, body) {
   return res.json();
 }
 
-export function askBackend(question) {
-  return post("/ask", { question });
+export function askBackend(question, shown) {
+  return post("/ask", { question, shown });
 }
 
 export function getRanking(scenario) {
