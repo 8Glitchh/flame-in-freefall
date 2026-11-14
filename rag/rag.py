@@ -23,11 +23,46 @@ RRF_K = 60
 KEYWORD_WEIGHT = 0.5
 MEANING_WEIGHT = 0.5
 
+SPEC_FILE = re.compile(r"SRD|ISRD|SORD|SCR|Requirements|Operations_Manual|DoD|DLD|Concept_Description|"
+                       r"data_file_description", re.I)
 EXCLUDE = re.compile(r"MergeResult|Planned_Test_Matrix|Image_Directory_Nomenclature|DataOrganization|"
                      r"As_Run_Test_Matrix|BASS-II_Test\.Matrices", re.I)
 FINDING_FIELDS = ("finding", "evidence", "safety_implication", "fuel_material", "oxygen_raw", "pressure_raw",
                   "flow_raw", "gravity", "spread_rate_raw", "peak_heat_release_rate_raw", "time_to_detection_raw",
                   "other_measurements", "sensors", "variables", "earth_application", "partial_g_applicability")
+
+EXPERIMENTS = {
+    "SAFFIRE-I": ("PSI-98", "Spacecraft Fire Safety Experiment I", r"saffire[\s_-]*(i|1)(?![iv\d])"),
+    "SAFFIRE-II": ("PSI-99", "Spacecraft Fire Experiment II", r"saffire[\s_-]*(ii|2)(?![iv\d])"),
+    "SAFFIRE-III": ("PSI-100", "Spacecraft Fire Experiment III", r"saffire[\s_-]*(iii|3)(?![iv\d])"),
+    "SAFFIRE-IV": ("", "Spacecraft Fire Experiment IV", r"saffire[\s_-]*(iv|4)(?![iv\d])"),
+    "SAFFIRE-V": ("", "Spacecraft Fire Experiment V", r"saffire[\s_-]*(v|5)(?![iv\d])"),
+    "SAFFIRE-VI": ("", "Spacecraft Fire Experiment VI", r"saffire[\s_-]*(vi|6)(?![iv\d])"),
+    "BASS": ("PSI-26", "Burning and Suppression of Solids", r"\bbass(?![\s_-]*(ii|2)\b)\b"),
+    "BASS-II": ("PSI-25", "Burning and Suppression of Solids II", r"\bbass[\s_-]*(ii|2)\b"),
+    "FLEX": ("PSI-69", "Flame Extinguishment Experiment", r"\bflex(?![\s_-]*(2|ii)\b)\b"),
+    "FLEX-2": ("PSI-68", "Flame Extinguishment Experiment 2", r"\bflex[\s_-]*(2|ii)\b"),
+    "CFI": ("PSI-39", "Cool Flames Investigation", r"\bcfi\b(?![\s_-]*g)"),
+    "CFI-G": ("PSI-159", "Cool Flames Investigation with Gases", r"\bcfi[\s_-]*g\b"),
+    "ACME-FLAME-DESIGN": ("PSI-10", "ACME Flame Design", r"flame[\s_-]*design"),
+    "ACME-BRE": ("PSI-20", "ACME Burning Rate Emulator", r"\bbre\b|burning rate emulator"),
+    "ACME-CLD": ("PSI-21", "ACME Coflow Laminar Diffusion Flame", r"\bcld\b|coflow laminar"),
+    "ACME-EFIELD": ("PSI-22", "ACME Electric-Field Flames", r"e[\s_-]*field|electric[\s_-]*field"),
+    "ACME-SFLAME": ("PSI-23", "ACME Structure and Response of Spherical Diffusion Flames", r"s[\s_-]*flame\b"),
+    "SAME": ("PSI-102", "Smoke and Aerosol Measurement Experiment", r"(?-i)\bSAME\b(?![\s_-]*R\b)"),
+    "SAME-R": ("PSI-101", "Smoke Aerosol Measurement Experiment Reflight", r"(?-i)\bSAME[\s_-]*R\b"),
+    "SPICE": ("PSI-107", "Smoke Point In Co-flow Experiment", r"\bspice\b"),
+    "SLICE": ("PSI-106", "Structure and Liftoff In Combustion Experiment", r"\bslice\b"),
+    "DAFT": ("PSI-47", "Dust and Aerosol Measurement Feasibility Test", r"\bdaft\b"),
+}
+PSI_TO_KEY = {psi: k for k, (psi, _, _) in EXPERIMENTS.items() if psi}
+PSI_GROUND = {"PSI-60": ["SPICE"], "PSI-62": ["BASS", "BASS-II"], "PSI-115": ["SAME", "SAME-R"],
+              "PSI-117": ["FLEX"], "PSI-142": ["CFI-G"]}
+FACT_SHEETS = {"acme": [k for k in EXPERIMENTS if k.startswith("ACME")] + ["CFI-G"],
+               "suppression-of-solids": ["BASS", "BASS-II"], "-daft": ["DAFT"], "-flex": ["FLEX", "FLEX-2"],
+               "saffire": [k for k in EXPERIMENTS if k.startswith("SAFFIRE")], "-same": ["SAME", "SAME-R"],
+               "-slice": ["SLICE"], "-spice": ["SPICE"]}
+KEY_ALIASES = {"COOL-FLAME-TRANSITIONS": ["CFI-G"]}
 
 COUNTRIES = r"(USA|France|Germany|Japan|Russia|Netherlands|Slovenia|Sweden|Italy|Canada|UK|Belgium|Spain)"
 AFFILIATION = re.compile(rf",\s*{COUNTRIES}\b")
@@ -52,20 +87,48 @@ def split_sentences(text):
     return [p.strip() for p in parts if p.strip()]
 
 
-def make_chunk(text, document, pages=()):
-    return {"text": text, "document": document, "pages": sorted(set(pages))}
+def experiments_for_file(name):
+    m = re.match(r"(PSI-\d+)", name)
+    if m:
+        psi = m.group(1)
+        return [PSI_TO_KEY[psi]] if psi in PSI_TO_KEY else PSI_GROUND.get(psi, [])
+    if name.startswith("ICES-2026-577"):
+        return ["SAFFIRE-IV", "SAFFIRE-V", "SAFFIRE-VI"]
+    low = name.lower()
+    for word, keys in FACT_SHEETS.items():
+        if word in low:
+            return keys
+    return []
 
 
-def pack(sentences, document, prefix=""):
+def experiments_for_key(key, psi=""):
+    key = key.strip().upper()
+    if key in EXPERIMENTS:
+        return [key]
+    if psi in PSI_TO_KEY:
+        return [PSI_TO_KEY[psi]]
+    if psi in PSI_GROUND:
+        return PSI_GROUND[psi]
+    return KEY_ALIASES.get(key, [])
+
+
+def make_chunk(text, document, kind, experiments, pages=()):
+    return {"text": text, "document": document, "kind": kind,
+            "experiments": list(experiments), "pages": sorted(set(pages))}
+
+
+def pack(sentences, document, kind, experiments, prefix=""):
     chunks, cur = [], []
     for s, page in sentences:
         current_text = " ".join(x for x, _ in cur)
         if cur and n_tokens(current_text + " " + s) > MAX_TOKENS:
-            chunks.append(make_chunk(prefix + current_text, document, [p for _, p in cur if p]))
+            chunks.append(make_chunk(prefix + current_text, document, kind, experiments,
+                                     [p for _, p in cur if p]))
             cur = cur[-1:]
         cur.append((s, page))
     if cur:
-        chunks.append(make_chunk(prefix + " ".join(x for x, _ in cur), document, [p for _, p in cur if p]))
+        chunks.append(make_chunk(prefix + " ".join(x for x, _ in cur), document, kind, experiments,
+                                 [p for _, p in cur if p]))
     return chunks
 
 
@@ -115,6 +178,12 @@ def clean_lines(text, repeated):
 
 
 def load_pdf(path):
+    if "fact_sheets" in path.parts:
+        kind = "factsheet"
+    elif SPEC_FILE.search(path.name):
+        kind = "spec"
+    else:
+        kind = "paper"
     pages = read_pdf(path)
     repeated = repeated_lines(pages)
     sentences = []
@@ -129,7 +198,7 @@ def load_pdf(path):
             sentences.append((s, page_no))
         if stop:
             break
-    return pack(sentences, path.name)
+    return pack(sentences, path.name, kind, experiments_for_file(path.name))
 
 
 def load_markdown(path):
@@ -138,18 +207,19 @@ def load_markdown(path):
         line = line.strip().lstrip("#-* ").strip()
         if line:
             sentences += [(s, None) for s in split_sentences(line)]
-    return pack(sentences, path.name)
+    return pack(sentences, path.name, "background", [])
 
 
 def load_docx(path):
     import docx
     document = docx.Document(str(path))
+    experiments = experiments_for_file(path.name)
     sentences = []
     for paragraph in document.paragraphs:
         text = clean_value(paragraph.text)
         if text:
             sentences += [(s, None) for s in split_sentences(text)]
-    chunks = pack(sentences, path.name)
+    chunks = pack(sentences, path.name, "doc", experiments)
     for table in document.tables:
         rows = [[clean_value(cell.text) for cell in row.cells] for row in table.rows]
         if len(rows) < 2:
@@ -158,13 +228,14 @@ def load_docx(path):
         for row in rows[1:]:
             facts = "; ".join(f"{h}: {v}" for h, v in zip(header, row) if h and v)
             if facts:
-                chunks.append(make_chunk(facts + ".", path.name))
+                chunks.append(make_chunk(facts + ".", path.name, "table_row", experiments))
     return chunks
 
 
 def load_xlsx(path):
     import openpyxl
-    label = path.stem.split("_")[1] if path.name.startswith("PSI-") else path.stem
+    experiments = experiments_for_file(path.name)
+    label = experiments[0] if experiments else path.stem
     book = openpyxl.load_workbook(path, read_only=True, data_only=True)
     chunks = []
     for sheet in book.worksheets:
@@ -178,7 +249,7 @@ def load_xlsx(path):
         for row in rows[1:]:
             facts = "; ".join(f"{h}: {v}" for h, v in zip(header, row) if h and v)
             if facts.count(":") >= 2:
-                chunks.append(make_chunk(f"{label} {sheet.title}: {facts}.", path.name))
+                chunks.append(make_chunk(f"{label} {sheet.title}: {facts}.", path.name, "spreadsheet_row", experiments))
     book.close()
     return chunks
 
@@ -244,11 +315,12 @@ def load_tests(path):
 
     chunks = []
     for label, rows in groups.items():
+        experiments = experiments_for_key(label, rows[0]["psi_id"])
         for row in rows:
             page = row["source_page"]
-            chunks.append(make_chunk(row_text(row, label), Path(row["source_file"]).name,
-                                     [int(page)] if page.isdigit() else []))
-        chunks.append(make_chunk(summary_text(rows, label), "psi_tests_clean.csv"))
+            chunks.append(make_chunk(row_text(row, label), Path(row["source_file"]).name, "table_row",
+                                     experiments, [int(page)] if page.isdigit() else []))
+        chunks.append(make_chunk(summary_text(rows, label), "psi_tests_clean.csv", "table_summary", experiments))
     return chunks
 
 
@@ -256,14 +328,16 @@ def load_investigations(path):
     chunks = []
     with open(path, encoding="utf-8") as f:
         for row in csv.DictReader(f):
-            name = f"{row['acronym'] + ' – ' if row['acronym'] else ''}{row['title']} ({row['psi_id']})"
+            psi = row["psi_id"]
+            experiments = [PSI_TO_KEY[psi]] if psi in PSI_TO_KEY else PSI_GROUND.get(psi, [])
+            name = f"{row['acronym'] + ' – ' if row['acronym'] else ''}{row['title']} ({psi})"
             overview = (f"{name}. Type: {row['type']}. Area: {row['sub_area'] or row['research_area']}. "
                         f"Dates: {row['start'] or '?'} to {row['end'] or '?'}. DOI: {row['doi']}.")
-            chunks.append(make_chunk(overview, path.name))
+            chunks.append(make_chunk(overview, path.name, "experiment", experiments))
             for field in ("objective", "approach", "hypothesis", "impacts"):
                 if row[field]:
                     sentences = [(s, None) for s in split_sentences(row[field])]
-                    chunks += pack(sentences, path.name, f"{name} – {field}: ")
+                    chunks += pack(sentences, path.name, "experiment", experiments, f"{name} – {field}: ")
     return chunks
 
 
@@ -275,8 +349,9 @@ def load_findings(path):
                 continue
             facts = "; ".join(f"{k.replace('_raw', '').replace('_', ' ')}: {row[k]}" for k in FINDING_FIELDS if row.get(k))
             page = row.get("page", "")
+            experiments = [k for k in row.get("experiment_keys", "").split(";") if k in EXPERIMENTS]
             chunks.append(make_chunk(f"Finding ({row.get('investigation', '')}): {facts}.",
-                                     row.get("document_name", path.name),
+                                     row.get("document_name", path.name), "finding", experiments,
                                      [int(page)] if page.isdigit() else []))
     return chunks
 
@@ -301,7 +376,7 @@ def load_file(path):
 
 
 def load_all(verbose=False):
-    chunks = []
+    chunks, seen = [], {}
     for path in sorted(DATA.rglob("*")):
         if not path.is_file() or EXCLUDE.search(path.name):
             continue
@@ -310,9 +385,20 @@ def load_all(verbose=False):
         except Exception as e:
             print(f"skipped {path.name}: {e}")
             continue
-        chunks += loaded
+        added = 0
+        for c in loaded:
+            key = re.sub(r"\W+", " ", c["text"].lower()).strip()
+            if len(key) < 20:
+                continue
+            if key in seen:
+                kept = seen[key]
+                kept["experiments"] += [e for e in c["experiments"] if e not in kept["experiments"]]
+                continue
+            seen[key] = c
+            chunks.append(c)
+            added += 1
         if verbose and loaded:
-            print(f"{len(loaded):>5}  {path.relative_to(DATA)}")
+            print(f"{added:>5} of {len(loaded):>5}  {path.relative_to(DATA)}")
     return chunks
 
 
@@ -363,15 +449,21 @@ class Dense:
     def __init__(self, chunks):
         self.model = SentenceTransformer(EMBED_MODEL)
         texts = [c["text"] for c in chunks]
-        key = hashlib.md5((EMBED_MODEL + "\n".join(texts)).encode("utf-8")).hexdigest()[:16]
-        path = CACHE / f"vectors-{key}.npy"
+        keys = [hashlib.md5(t.encode("utf-8")).hexdigest() for t in texts]
+        path = CACHE / (EMBED_MODEL.replace("/", "_") + ".npz")
+        saved = {}
         if path.exists():
-            self.vectors = np.load(path)
-        else:
-            print(f"Embedding {len(texts)} passages (first run only, then cached)...")
-            self.vectors = self.model.encode(texts, normalize_embeddings=True, batch_size=64, show_progress_bar=True)
+            data = np.load(path)
+            saved = dict(zip(data["keys"], data["vectors"]))
+        missing = [(k, t) for k, t in zip(keys, texts) if k not in saved]
+        if missing:
+            print(f"Embedding {len(missing)} new passages (saved for next time)...")
+            vectors = self.model.encode([t for _, t in missing], normalize_embeddings=True,
+                                        batch_size=64, show_progress_bar=True)
+            saved.update({k: v for (k, _), v in zip(missing, vectors)})
             CACHE.mkdir(exist_ok=True)
-            np.save(path, self.vectors)
+            np.savez(path, keys=np.array(list(saved)), vectors=np.array(list(saved.values())))
+        self.vectors = np.array([saved[k] for k in keys])
 
     def scores(self, question):
         q = self.model.encode(QUERY_PREFIX + question, normalize_embeddings=True)
@@ -431,6 +523,8 @@ if __name__ == "__main__":
     if sys.argv[1:] == ["chunks"]:
         chunks = load_all(verbose=True)
         print(len(chunks), "chunks")
+        print(Counter(c["kind"] for c in chunks))
+        print(Counter(e for c in chunks for e in c["experiments"]))
     elif sys.argv[1:2] == ["ask"]:
         for i, c in enumerate(search(sys.argv[2]), 1):
             print(f"[{i}] {c['document']} p.{c['pages']} | {c['text'][:200]}\n")
