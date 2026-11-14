@@ -13,7 +13,7 @@ pip install -r requirements.txt
 uvicorn app:app --port 8000
 ```
 
-The first start downloads the embedding model for `rag.py`, so it takes a minute. Set `GROQ_API_KEY` before starting it to get written answers in the chat. Without it, `/ask` returns the best matching passage from the paper.
+The first start downloads the embedding model and embeds all the data for `rag.py`, so it takes a few minutes. After that it loads from `rag/.cache`. Set `GROQ_API_KEY` before starting it to get written answers in the chat. Without it, `/ask` returns the best matching passage from the paper.
 
 Frontend:
 
