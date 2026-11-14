@@ -162,6 +162,7 @@ def rank(scenario: Scenario):
 
 class Question(BaseModel):
     question: str
+    shown: list[str] = []
 
 
 def first_passage(sources):
@@ -187,7 +188,8 @@ def load_index():
 def ask(q: Question):
     result = rag.ask(q.question)
     if result["mode"] == "refused":
-        return {"answer": result["answer"], "citations": [], "mode": "refused", "cited": []}
+        return {"answer": result["answer"], "citations": [], "mode": "refused", "cited": [], "story": None}
     citations = [{"doc": s["document"], "pages": s["pages"]} for s in result["sources"]]
     answer = result["answer"] or first_passage(result["sources"])
-    return {"answer": tidy(answer), "citations": citations, "mode": result["mode"], "cited": result["cited"]}
+    story = rag.story_for(result, q.shown)
+    return {"answer": tidy(answer), "citations": citations, "mode": result["mode"], "cited": result["cited"], "story": story}
