@@ -4,6 +4,7 @@ import { ChevronRight, ChevronLeft, ChevronUp, ChevronDown } from "lucide-react"
 import Chat from "./pages/Chat.jsx";
 import Dashboard from "./pages/Dashboard.jsx";
 import View3D from "./pages/View3D.jsx";
+import Guide from "./components/Guide.jsx";
 import { habitats } from "./data/tests.js";
 
 const rooms = {
@@ -30,6 +31,20 @@ export default function App() {
   const [room, setRoom] = useState("chat");
   const [scenario, setScenario] = useState({ ...habitats[1], need: "prevention" });
   const [seen3d, setSeen3d] = useState(false);
+  const [guide, setGuide] = useState(() => {
+    try {
+      return !localStorage.getItem("seen-guide");
+    } catch {
+      return false;
+    }
+  });
+
+  function closeGuide() {
+    setGuide(false);
+    try {
+      localStorage.setItem("seen-guide", "1");
+    } catch {}
+  }
 
   const go = useCallback((next) => {
     if (next === "space") setSeen3d(true);
@@ -45,7 +60,7 @@ export default function App() {
 
   useEffect(() => {
     function onKey(e) {
-      if (e.target.tagName === "INPUT") return;
+      if (guide || e.target.tagName === "INPUT") return;
       if (room === "chat" && e.key === "ArrowRight") go("dashboard");
       if (room === "chat" && e.key === "ArrowUp") go("space");
       if (room === "dashboard" && e.key === "ArrowLeft") go("chat");
@@ -53,12 +68,13 @@ export default function App() {
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [room, go]);
+  }, [room, go, guide]);
 
   useEffect(() => {
     let timer = null;
 
     function onMouseMove(e) {
+      if (guide) return;
       const gap = 12;
       let side = null, special = null;
 
@@ -121,7 +137,7 @@ export default function App() {
       window.removeEventListener("mousemove", onMouseMove);
       document.removeEventListener("mouseleave", onLeave);
     };
-  }, [room, go]);
+  }, [room, go, guide]);
 
   return (
     <div className="relative h-full w-full overflow-clip">
@@ -140,6 +156,14 @@ export default function App() {
           {seen3d && <View3D active={room === "space"} />}
         </section>
       </motion.div>
+
+      {room === "chat" && (
+        <button className="help" aria-label="Open guide" onClick={() => setGuide(true)}>
+          ?
+        </button>
+      )}
+
+      <Guide open={guide} onClose={closeGuide} />
 
       <AnimatePresence>
         {travel[room] && (
