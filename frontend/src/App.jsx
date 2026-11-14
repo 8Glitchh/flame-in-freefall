@@ -124,7 +124,7 @@ export default function App() {
   }, [room, go]);
 
   return (
-    <div className="relative h-full w-full overflow-hidden">
+    <div className="relative h-full w-full overflow-clip">
       <motion.div
         className="absolute inset-0"
         animate={{ x: `${rooms[room].x}vw`, y: `${rooms[room].y}vh` }}

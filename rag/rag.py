@@ -2,8 +2,12 @@ import csv
 import hashlib
 import json
 import math
+import os
 import re
 import sys
+import time
+import urllib.error
+import urllib.request
 from collections import Counter
 from datetime import date, datetime
 from pathlib import Path
@@ -32,6 +36,19 @@ SPEC_PENALTY = 0.006
 RERANK_TOP = 30
 RERANK_BONUS = 2.0
 MAX_PER_DOCUMENT = 2
+MIN_COVERAGE = 0.4
+MIN_COVERAGE_WITH_EXPERIMENT = 0.2
+NOT_FOUND = "The documents I have don't answer this."
+SYSTEM = """You are a NASA microgravity-combustion research assistant for fire-safety engineers and students.
+Rules:
+1. Use ONLY the numbered passages. Never add outside knowledge, even if you know it.
+2. Cite every factual sentence with passage numbers like [1] or [2][4].
+3. Copy numbers and units exactly as written. Say which experiment or test each number comes from.
+4. Keep microgravity (0 g, low-g, ISS, Cygnus) results separate from normal-gravity (1 g) results. Never present a
+   Moon or Mars (partial gravity) value as measured: at most say it should lie between the 0 g and 1 g results.
+5. If the passages don't answer the question, reply exactly: "The documents I have don't answer this."
+   If they answer only part of it, answer that part and say what is missing.
+6. Be concise: a direct answer first (1 to 3 sentences), then short supporting points if useful."""
 
 SPEC_FILE = re.compile(r"SRD|ISRD|SORD|SCR|Requirements|Operations_Manual|DoD|DLD|Concept_Description|"
                        r"data_file_description", re.I)
@@ -47,6 +64,10 @@ SYNONYMS = {"heat release rate": "hrr", "hrr": "heat release rate", "o2": "oxyge
             "microgravity": "micro-g low-gravity", "extinction diameter": "dext", "extinguish": "extinction",
             "spread": "propagation", "smoke": "aerosol particulate", "pressure": "kpa atm mbar",
             "fast": "rate speed", "hot": "temperature", "fuel": "material sample"}
+DOMAIN = re.compile(r"(fire|flam|burn|combust|smoke|soot|oxyg|\bo2\b|gravit|spacecraft|\biss\b|astronaut|fuel|droplet|"
+                    r"ignit|extin|suppress|pressure|pmma|cotton|sibal|hazard|safety|heat|\bco2?\b|nasa|psi|aerosol|"
+                    r"particle|experiment|tests?\b|sample|material|habitat|cabin|apollo|mir\b|detect|alarm|toxic|"
+                    r"temperature|space|station|orbit|crew|module|cygnus|lunar|moon|mars)", re.I)
 FINDING_FIELDS = ("finding", "evidence", "safety_implication", "fuel_material", "oxygen_raw", "pressure_raw",
                   "flow_raw", "gravity", "spread_rate_raw", "peak_heat_release_rate_raw", "time_to_detection_raw",
                   "other_measurements", "sensors", "variables", "earth_application", "partial_g_applicability")
@@ -491,9 +512,9 @@ class BM25:
         self.docs = [Counter(tokens(header(c) + " " + c["text"])) for c in chunks]
         self.lengths = [sum(d.values()) for d in self.docs]
         self.avg = sum(self.lengths) / len(self.lengths)
-        n = len(self.docs)
-        df = Counter(w for d in self.docs for w in d)
-        self.idf = {w: math.log(1 + (n - f + 0.5) / (f + 0.5)) for w, f in df.items()}
+        self.n = len(self.docs)
+        self.df = Counter(w for d in self.docs for w in d)
+        self.idf = {w: math.log(1 + (self.n - f + 0.5) / (f + 0.5)) for w, f in self.df.items()}
         self.k1, self.b = k1, b
 
     def scores(self, question):
@@ -644,11 +665,143 @@ def diversify(scored, chunks, k):
     return results
 
 
+def coverage(question, hits):
+    bm25 = get_index().bm25
+    words = {w for w in tokens(question) if len(w) > 2} - {"saffire", "experiment", "test", "nasa", "data"}
+    if not words:
+        return 1.0
+    found = set(tokens(" ".join(header(c) + " " + c["text"] for c in hits)))
+
+    def rarity(w):
+        if w not in bm25.df:
+            return math.log(bm25.n)
+        return math.log(1 + bm25.n / bm25.df[w])
+
+    total = sum(rarity(w) for w in words)
+    return sum(rarity(w) for w in words if w in found) / total
+
+
+def load_env():
+    for path in (HERE / ".env", HERE.parent / ".env"):
+        if path.exists():
+            for line in path.read_text(encoding="utf-8").splitlines():
+                m = re.match(r"\s*([A-Z_]+)\s*=\s*(.*?)\s*$", line)
+                if m and not os.getenv(m.group(1)):
+                    os.environ[m.group(1)] = m.group(2).strip('"').strip("'")
+
+
+def call_llm(question, sources):
+    passages = "\n\n".join(f"[{s['n']}] ({s['label']})\n{s['text']}" for s in sources)
+    body = json.dumps({"model": os.getenv("LLM_MODEL"), "temperature": 0,
+                       "messages": [{"role": "system", "content": SYSTEM},
+                                    {"role": "user", "content": f"QUESTION: {question}\n\nPASSAGES:\n{passages}"}]})
+    base = os.getenv("LLM_BASE_URL", "").rstrip("/")
+    request = urllib.request.Request(base + "/chat/completions", data=body.encode("utf-8"), headers={
+        "Content-Type": "application/json", "Authorization": f"Bearer {os.getenv('LLM_API_KEY', '')}"})
+    with urllib.request.urlopen(request, timeout=20) as response:
+        return json.loads(response.read())["choices"][0]["message"]["content"].strip()
+
+
+def ask(question, experiment=None, use_llm=True):
+    hits = search(question, experiment=experiment)
+    named = experiments_in(question)
+    cover = coverage(question, hits)
+    sources = [{"n": n, "label": header(c), "document": c["document"], "pages": c["pages"], "kind": c["kind"],
+                "experiments": c["experiments"], "text": c["text"]} for n, c in enumerate(hits, 1)]
+    result = {"question": question, "answer": None, "mode": "passages only", "coverage": round(cover, 2),
+              "experiments": named, "sources": sources, "cited": []}
+
+    on_topic = bool(named) or bool(DOMAIN.search(question))
+    minimum = MIN_COVERAGE_WITH_EXPERIMENT if named else MIN_COVERAGE
+    if not hits or cover < minimum or not on_topic:
+        result.update(answer=NOT_FOUND, mode="refused")
+        return result
+
+    load_env()
+    if not (use_llm and os.getenv("LLM_MODEL") and os.getenv("LLM_API_KEY")):
+        return result
+    text, error = None, None
+    for attempt in range(3):
+        try:
+            text = call_llm(question, sources)
+            break
+        except (urllib.error.URLError, KeyError, TimeoutError, ValueError) as e:
+            error = e
+            time.sleep(3 * (attempt + 1))
+    if text is None:
+        result["error"] = f"AI call failed ({error}), showing passages only."
+        return result
+
+    valid = {str(s["n"]) for s in sources}
+    text = re.sub(r"\[(\d+)\]", lambda m: m.group(0) if m.group(1) in valid else "", text)
+    cited = sorted({int(n) for n in re.findall(r"\[(\d+)\]", text)})
+    if NOT_FOUND.lower()[:30] in text.lower():
+        cited = []
+    result.update(answer=text, mode=os.getenv("LLM_MODEL"), cited=cited)
+    return result
+
+
+def print_result(r):
+    print(f"\nQ: {r['question']}")
+    if r["experiments"]:
+        print(f"   about: {', '.join(r['experiments'][:4])}")
+    print(f"   mode: {r['mode']}   coverage: {r['coverage']}")
+    if r.get("error"):
+        print("   !!", r["error"])
+    print(f"\nA: {r['answer']}\n" if r["answer"] else "\n(no answer written: add LLM settings to .env)\n")
+    for s in r["sources"]:
+        mark = "*" if s["n"] in r["cited"] else " "
+        print(f" {mark}[{s['n']}] {s['label']} | {s['kind']}\n      {s['text'][:200]}")
+
+STORY_MIN_SCORE = 3
+STORY_GAP = 3
+
+
+def load_stories():
+    path = DATA / "stories.json"
+    return json.load(open(path, encoding="utf-8")) if path.exists() else []
+
+
+def story_score(story, question, answer, experiments):
+    q, a = question.lower(), (answer or "").lower()
+    score = 0
+    for word in story["keywords"]:
+        pattern = rf"\b{re.escape(word)}"
+        if re.search(pattern, q):
+            score += 3
+        elif re.search(pattern, a):
+            score += 1
+    if set(story["experiments"]) & experiments:
+        score += 1
+    return score
+
+
+def story_for(result, shown=(), answers_since_last=None):
+    if result["mode"] == "refused":
+        return None
+    if answers_since_last is not None and answers_since_last < STORY_GAP:
+        return None
+    experiments = set(result["experiments"])
+    for s in result["sources"]:
+        if s["n"] in result["cited"]:
+            experiments.update(s["experiments"])
+    best, best_score = None, STORY_MIN_SCORE - 1
+    for story in load_stories():
+        if story["id"] in shown:
+            continue
+        score = story_score(story, result["question"], result["answer"], experiments)
+        if score > best_score:
+            best, best_score = story, score
+    return best
+
 def evaluate(path=HERE / "eval_questions.json"):
     qs = json.load(open(path, encoding="utf-8"))
-    first = top = 0
+    first = top = refused = 0
     for item in qs:
         if item.get("expect") == "not_found":
+            ok = ask(item["q"], use_llm=False)["mode"] == "refused"
+            refused += ok
+            print(f"{'OK' if ok else 'FAIL':>4}  {item['q']}  (should be refused)")
             continue
         hits = search(item["q"])
         rank = next((i + 1 for i, c in enumerate(hits)
@@ -656,7 +809,7 @@ def evaluate(path=HERE / "eval_questions.json"):
         first += rank == 1
         top += rank > 0
         print(f"{rank or 'MISS':>4}  {item['q']}")
-    print(f"\nfirst: {first}   in top 6: {top}")
+    print(f"\nfirst: {first}   in top 6: {top}   refused off-topic: {refused}")
 
 
 if __name__ == "__main__":
@@ -667,9 +820,28 @@ if __name__ == "__main__":
         print(Counter(e for c in chunks for e in c["experiments"]))
     elif sys.argv[1:2] == ["detect"]:
         print(experiments_in(sys.argv[2]))
-    elif sys.argv[1:2] == ["ask"]:
+    elif sys.argv[1:2] == ["search"]:
         print("about:", experiments_in(sys.argv[2]) or "no experiment named", "\n")
         for i, c in enumerate(search(sys.argv[2]), 1):
             print(f"[{i}] {header(c)} | {c['kind']} | {c['text'][:200]}\n")
+    elif sys.argv[1:2] == ["ask"]:
+        r = ask(sys.argv[2])
+        print_result(r)
+        s = story_for(r)
+        if s:
+            print(f"\n[ Why this matters: {s['title']} ]\n{s['story']}\nLesson: {s['lesson']}\n"
+                  f"Our data: {s['data_says']}\nSource: {s['source']['name']} ({s['source']['url']})")
+    elif sys.argv[1:2] == ["heldout"]:
+        evaluate(HERE / "heldout.json")
+    elif sys.argv[1:2] == ["answers"]:
+        name = sys.argv[2] if len(sys.argv) > 2 else "eval_questions.json"
+        lines = []
+        for item in json.load(open(HERE / name, encoding="utf-8")):
+            r = ask(item["q"])
+            print(f"\nQ: {r['question']}\nA: {r['answer'] or r.get('error', '')}")
+            lines.append(f"Q: {r['question']}\nA: {r['answer'] or r.get('error', '')}\n")
+            time.sleep(5)
+        (HERE.parent / "answers.md").write_text("\n".join(lines), encoding="utf-8")
+        print("\nsaved answers.md")
     else:
         evaluate()
