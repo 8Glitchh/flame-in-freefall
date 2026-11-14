@@ -55,6 +55,11 @@ EXPERIMENTS = {
     "SLICE": ("PSI-106", "Structure and Liftoff In Combustion Experiment", r"\bslice\b"),
     "DAFT": ("PSI-47", "Dust and Aerosol Measurement Feasibility Test", r"\bdaft\b"),
 }
+FAMILIES = {
+    r"\bsaffire\b(?![\s_-]*(i|ii|iii|iv|v|vi|[1-6])\b)": [k for k in EXPERIMENTS if k.startswith("SAFFIRE")],
+    r"\bacme\b": [k for k in EXPERIMENTS if k.startswith("ACME")] + ["CFI-G"],
+    r"cool flame": ["CFI", "CFI-G"],
+}
 PSI_TO_KEY = {psi: k for k, (psi, _, _) in EXPERIMENTS.items() if psi}
 PSI_GROUND = {"PSI-60": ["SPICE"], "PSI-62": ["BASS", "BASS-II"], "PSI-115": ["SAME", "SAME-R"],
               "PSI-117": ["FLEX"], "PSI-142": ["CFI-G"]}
@@ -85,6 +90,25 @@ def n_tokens(text):
 def split_sentences(text):
     parts = re.split(r"(?<=[.!?])\s+(?=[A-Z(])", text)
     return [p.strip() for p in parts if p.strip()]
+
+
+def experiments_in(text):
+    raw = str(text)
+    low = raw.lower()
+    found = {}
+    for key, (_, _, pattern) in EXPERIMENTS.items():
+        if pattern.startswith("(?-i)"):
+            m = re.search(pattern[5:], raw)
+        else:
+            m = re.search(pattern, low)
+        if m:
+            found[key] = m.start()
+    for pattern, keys in FAMILIES.items():
+        m = re.search(pattern, low)
+        if m:
+            for k in keys:
+                found.setdefault(k, m.start() + 0.5)
+    return sorted(found, key=found.get)
 
 
 def experiments_for_file(name):
@@ -525,7 +549,10 @@ if __name__ == "__main__":
         print(len(chunks), "chunks")
         print(Counter(c["kind"] for c in chunks))
         print(Counter(e for c in chunks for e in c["experiments"]))
+    elif sys.argv[1:2] == ["detect"]:
+        print(experiments_in(sys.argv[2]))
     elif sys.argv[1:2] == ["ask"]:
+        print("about:", experiments_in(sys.argv[2]) or "no experiment named", "\n")
         for i, c in enumerate(search(sys.argv[2]), 1):
             print(f"[{i}] {c['document']} p.{c['pages']} | {c['text'][:200]}\n")
     else:
