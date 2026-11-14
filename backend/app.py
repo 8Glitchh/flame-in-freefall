@@ -1,9 +1,8 @@
 import csv
-import os
+import re
 import sys
 from pathlib import Path
 
-import requests
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -14,8 +13,6 @@ sys.path.append(str(ROOT / "rag"))
 import rag
 
 KPA_TO_PSI = 0.145038
-GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
-GROQ_MODEL = "llama-3.3-70b-versatile"
 
 app = FastAPI()
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
@@ -167,29 +164,18 @@ class Question(BaseModel):
     question: str
 
 
-def write_answer(question, passages):
-    key = os.environ.get("GROQ_API_KEY")
-    if not key:
-        text = passages[0]["text"]
-        if text.startswith("Finding (") and "finding: " in text:
-            text = text.split("finding: ", 1)[1].split("; ")[0]
-        first = text.split(". ")
-        return ". ".join(first[:2]).rstrip(".") + ". [1]"
+def first_passage(sources):
+    text = sources[0]["text"]
+    if text.startswith("Finding (") and "finding: " in text:
+        text = text.split("finding: ", 1)[1].split("; ")[0]
+    return ". ".join(text.split(". ")[:2]).rstrip(".") + ". [1]"
 
-    sources = "\n\n".join(f"[{i}] {p['text']}" for i, p in enumerate(passages, 1))
-    prompt = (
-        "Answer the question using only the passages below. "
-        "Put the passage number in brackets after each fact, like [1]. "
-        "Keep it to 2 or 3 sentences. If the passages don't answer it, say you don't know.\n\n"
-        f"{sources}\n\nQuestion: {question}"
-    )
-    response = requests.post(
-        GROQ_URL,
-        headers={"Authorization": f"Bearer {key}"},
-        json={"model": GROQ_MODEL, "messages": [{"role": "user", "content": prompt}], "temperature": 0.2},
-        timeout=30,
-    )
-    return response.json()["choices"][0]["message"]["content"]
+
+def tidy(text):
+    text = re.sub(r"\]\s*\[", "], [", text)
+    text = re.sub(r"\*\*(.+?)\*\*", r"\1", text)
+    text = re.sub(r"(?m)^\s*[*-]\s+", "• ", text)
+    return re.sub(r"\s*\n\s*", " \n", text).strip()
 
 
 @app.on_event("startup")
@@ -197,14 +183,11 @@ def load_index():
     rag.get_index()
 
 
-def has_keywords(question):
-    return max(rag.get_index().bm25.scores(question)) > 0
-
-
 @app.post("/ask")
 def ask(q: Question):
-    passages = rag.search(q.question, k=5)
-    if not passages or not has_keywords(q.question):
-        return {"answer": "I couldn't find that in the papers we have.", "citations": []}
-    citations = [{"doc": p["document"], "pages": p["pages"]} for p in passages]
-    return {"answer": write_answer(q.question, passages), "citations": citations}
+    result = rag.ask(q.question)
+    if result["mode"] == "refused":
+        return {"answer": result["answer"], "citations": [], "mode": "refused", "cited": []}
+    citations = [{"doc": s["document"], "pages": s["pages"]} for s in result["sources"]]
+    answer = result["answer"] or first_passage(result["sources"])
+    return {"answer": tidy(answer), "citations": citations, "mode": result["mode"], "cited": result["cited"]}
