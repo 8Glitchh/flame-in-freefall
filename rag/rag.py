@@ -1,22 +1,33 @@
 import csv
+import hashlib
 import json
 import math
 import re
 import sys
 from collections import Counter
+from datetime import date, datetime
 from pathlib import Path
 
+import numpy as np
 import pymupdf
 from sentence_transformers import SentenceTransformer
 
 HERE = Path(__file__).resolve().parent
-PDF = HERE.parent / "data" / "papers" / "ICES-2026-577.pdf"
-TESTS_CSV = HERE.parent / "data" / "psi_tests_clean.csv"
+DATA = HERE.parent / "data"
+TESTS_CSV = DATA / "psi_tests_clean.csv"
+CACHE = HERE / ".cache"
+MAX_TOKENS = 220
 EMBED_MODEL = "BAAI/bge-small-en-v1.5"
 QUERY_PREFIX = "Represent this sentence for searching relevant passages: "
 RRF_K = 60
 KEYWORD_WEIGHT = 0.5
 MEANING_WEIGHT = 0.5
+
+EXCLUDE = re.compile(r"MergeResult|Planned_Test_Matrix|Image_Directory_Nomenclature|DataOrganization|"
+                     r"As_Run_Test_Matrix|BASS-II_Test\.Matrices", re.I)
+FINDING_FIELDS = ("finding", "evidence", "safety_implication", "fuel_material", "oxygen_raw", "pressure_raw",
+                  "flow_raw", "gravity", "spread_rate_raw", "peak_heat_release_rate_raw", "time_to_detection_raw",
+                  "other_measurements", "sensors", "variables", "earth_application", "partial_g_applicability")
 
 COUNTRIES = r"(USA|France|Germany|Japan|Russia|Netherlands|Slovenia|Sweden|Italy|Canada|UK|Belgium|Spain)"
 AFFILIATION = re.compile(rf",\s*{COUNTRIES}\b")
@@ -41,9 +52,36 @@ def split_sentences(text):
     return [p.strip() for p in parts if p.strip()]
 
 
+def make_chunk(text, document, pages=()):
+    return {"text": text, "document": document, "pages": sorted(set(pages))}
+
+
+def pack(sentences, document, prefix=""):
+    chunks, cur = [], []
+    for s, page in sentences:
+        current_text = " ".join(x for x, _ in cur)
+        if cur and n_tokens(current_text + " " + s) > MAX_TOKENS:
+            chunks.append(make_chunk(prefix + current_text, document, [p for _, p in cur if p]))
+            cur = cur[-1:]
+        cur.append((s, page))
+    if cur:
+        chunks.append(make_chunk(prefix + " ".join(x for x, _ in cur), document, [p for _, p in cur if p]))
+    return chunks
+
+
+def clean_value(value):
+    if value is None:
+        return ""
+    if isinstance(value, (datetime, date)):
+        return value.strftime("%Y-%m-%d")
+    if isinstance(value, float):
+        return f"{value:.6g}"
+    return re.sub(r"\s+", " ", str(value)).strip()
+
+
 def read_pdf(path):
-    doc = pymupdf.open(path)
-    return [(i + 1, page.get_text()) for i, page in enumerate(doc)]
+    with pymupdf.open(path) as doc:
+        return [(i + 1, page.get_text()) for i, page in enumerate(doc)]
 
 
 def line_key(line):
@@ -65,6 +103,9 @@ def clean_lines(text, repeated):
         line = line.strip()
         if not line or line_key(line) in repeated:
             continue
+        if line == "References":
+            lines.append(line)
+            continue
         if AFFILIATION.search(line) or len(AUTHOR_LIST.findall(line)) >= 2:
             continue
         if len(line) < 30 and not line.endswith((".", ":", ";", ",")):
@@ -73,14 +114,7 @@ def clean_lines(text, repeated):
     return lines
 
 
-def make_chunk(sentences, document):
-    return {"text": " ".join(s for s, _ in sentences),
-            "document": document,
-            "pages": sorted({p for _, p in sentences})}
-
-
-def load_pdf(path, max_tokens=220):
-    name = Path(path).name
+def load_pdf(path):
     pages = read_pdf(path)
     repeated = repeated_lines(pages)
     sentences = []
@@ -95,16 +129,57 @@ def load_pdf(path, max_tokens=220):
             sentences.append((s, page_no))
         if stop:
             break
+    return pack(sentences, path.name)
 
-    chunks, cur = [], []
-    for s, page in sentences:
-        current_text = " ".join(x for x, _ in cur)
-        if cur and n_tokens(current_text + " " + s) > max_tokens:
-            chunks.append(make_chunk(cur, name))
-            cur = cur[-1:]
-        cur.append((s, page))
-    if cur:
-        chunks.append(make_chunk(cur, name))
+
+def load_markdown(path):
+    sentences = []
+    for line in path.read_text(encoding="utf-8").splitlines():
+        line = line.strip().lstrip("#-* ").strip()
+        if line:
+            sentences += [(s, None) for s in split_sentences(line)]
+    return pack(sentences, path.name)
+
+
+def load_docx(path):
+    import docx
+    document = docx.Document(str(path))
+    sentences = []
+    for paragraph in document.paragraphs:
+        text = clean_value(paragraph.text)
+        if text:
+            sentences += [(s, None) for s in split_sentences(text)]
+    chunks = pack(sentences, path.name)
+    for table in document.tables:
+        rows = [[clean_value(cell.text) for cell in row.cells] for row in table.rows]
+        if len(rows) < 2:
+            continue
+        header = rows[0]
+        for row in rows[1:]:
+            facts = "; ".join(f"{h}: {v}" for h, v in zip(header, row) if h and v)
+            if facts:
+                chunks.append(make_chunk(facts + ".", path.name))
+    return chunks
+
+
+def load_xlsx(path):
+    import openpyxl
+    label = path.stem.split("_")[1] if path.name.startswith("PSI-") else path.stem
+    book = openpyxl.load_workbook(path, read_only=True, data_only=True)
+    chunks = []
+    for sheet in book.worksheets:
+        if re.search(r"camera|graph", sheet.title, re.I):
+            continue
+        rows = [[clean_value(v) for v in row] for row in sheet.iter_rows(values_only=True)]
+        rows = [r for r in rows if any(r)]
+        if len(rows) < 2:
+            continue
+        header = rows[0]
+        for row in rows[1:]:
+            facts = "; ".join(f"{h}: {v}" for h, v in zip(header, row) if h and v)
+            if facts.count(":") >= 2:
+                chunks.append(make_chunk(f"{label} {sheet.title}: {facts}.", path.name))
+    book.close()
     return chunks
 
 
@@ -171,17 +246,74 @@ def load_tests(path):
     for label, rows in groups.items():
         for row in rows:
             page = row["source_page"]
-            chunks.append({"text": row_text(row, label),
-                           "document": Path(row["source_file"]).name,
-                           "pages": [int(page)] if page.isdigit() else []})
-        chunks.append({"text": summary_text(rows, label),
-                       "document": "psi_tests_clean.csv",
-                       "pages": []})
+            chunks.append(make_chunk(row_text(row, label), Path(row["source_file"]).name,
+                                     [int(page)] if page.isdigit() else []))
+        chunks.append(make_chunk(summary_text(rows, label), "psi_tests_clean.csv"))
     return chunks
 
 
-def load_all():
-    return load_pdf(PDF) + load_tests(TESTS_CSV)
+def load_investigations(path):
+    chunks = []
+    with open(path, encoding="utf-8") as f:
+        for row in csv.DictReader(f):
+            name = f"{row['acronym'] + ' – ' if row['acronym'] else ''}{row['title']} ({row['psi_id']})"
+            overview = (f"{name}. Type: {row['type']}. Area: {row['sub_area'] or row['research_area']}. "
+                        f"Dates: {row['start'] or '?'} to {row['end'] or '?'}. DOI: {row['doi']}.")
+            chunks.append(make_chunk(overview, path.name))
+            for field in ("objective", "approach", "hypothesis", "impacts"):
+                if row[field]:
+                    sentences = [(s, None) for s in split_sentences(row[field])]
+                    chunks += pack(sentences, path.name, f"{name} – {field}: ")
+    return chunks
+
+
+def load_findings(path):
+    chunks = []
+    with open(path, encoding="utf-8-sig") as f:
+        for row in csv.DictReader(f):
+            if row.get("quote_found", "true").lower() != "true":
+                continue
+            facts = "; ".join(f"{k.replace('_raw', '').replace('_', ' ')}: {row[k]}" for k in FINDING_FIELDS if row.get(k))
+            page = row.get("page", "")
+            chunks.append(make_chunk(f"Finding ({row.get('investigation', '')}): {facts}.",
+                                     row.get("document_name", path.name),
+                                     [int(page)] if page.isdigit() else []))
+    return chunks
+
+
+def load_file(path):
+    if path == TESTS_CSV:
+        return load_tests(path)
+    if path.name == "investigations.csv":
+        return load_investigations(path)
+    if path.parent.name == "findings" and path.suffix == ".csv":
+        return load_findings(path)
+    if path.name == "background.md":
+        return load_markdown(path)
+    if "papers" in path.parts:
+        if path.suffix == ".pdf":
+            return load_pdf(path)
+        if path.suffix == ".docx":
+            return load_docx(path)
+        if path.suffix == ".xlsx":
+            return load_xlsx(path)
+    return []
+
+
+def load_all(verbose=False):
+    chunks = []
+    for path in sorted(DATA.rglob("*")):
+        if not path.is_file() or EXCLUDE.search(path.name):
+            continue
+        try:
+            loaded = load_file(path)
+        except Exception as e:
+            print(f"skipped {path.name}: {e}")
+            continue
+        chunks += loaded
+        if verbose and loaded:
+            print(f"{len(loaded):>5}  {path.relative_to(DATA)}")
+    return chunks
 
 
 def stem(w):
@@ -231,7 +363,15 @@ class Dense:
     def __init__(self, chunks):
         self.model = SentenceTransformer(EMBED_MODEL)
         texts = [c["text"] for c in chunks]
-        self.vectors = self.model.encode(texts, normalize_embeddings=True)
+        key = hashlib.md5((EMBED_MODEL + "\n".join(texts)).encode("utf-8")).hexdigest()[:16]
+        path = CACHE / f"vectors-{key}.npy"
+        if path.exists():
+            self.vectors = np.load(path)
+        else:
+            print(f"Embedding {len(texts)} passages (first run only, then cached)...")
+            self.vectors = self.model.encode(texts, normalize_embeddings=True, batch_size=64, show_progress_bar=True)
+            CACHE.mkdir(exist_ok=True)
+            np.save(path, self.vectors)
 
     def scores(self, question):
         q = self.model.encode(QUERY_PREFIX + question, normalize_embeddings=True)
@@ -289,10 +429,8 @@ def evaluate(path=HERE / "eval_questions.json"):
 
 if __name__ == "__main__":
     if sys.argv[1:] == ["chunks"]:
-        chunks = load_all()
-        print(len(chunks), "chunks\n")
-        for c in chunks[:5]:
-            print("pages", c["pages"], "|", c["text"][:250], "\n")
+        chunks = load_all(verbose=True)
+        print(len(chunks), "chunks")
     elif sys.argv[1:2] == ["ask"]:
         for i, c in enumerate(search(sys.argv[2]), 1):
             print(f"[{i}] {c['document']} p.{c['pages']} | {c['text'][:200]}\n")
