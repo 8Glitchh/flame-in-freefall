@@ -1,10 +1,10 @@
-
+import sys
 import pandas as pd
 import re
 from pathlib import Path
 
-INPUT_FILE = ""
-OUTPUT_FILE = ""
+INPUT_FILE = sys.argv[1] if len(sys.argv) > 1 else ""
+OUTPUT_FILE = sys.argv[2] if len(sys.argv) > 2 else ""
 
 MEASUREMENTS = {
     "oxygen": {
@@ -15,6 +15,7 @@ MEASUREMENTS = {
             "mol fraction": 100,
             "volume fraction": 100,
             "fraction": 100,
+            "Y_O2":1
         }
     },
     "pressure": {
@@ -24,25 +25,36 @@ MEASUREMENTS = {
             "Pa": 0.001,
             "MPa": 1000,
             "bar": 100,
+            "mbar": 0.1,
             "atm": 101.325,
             "psi": 6.89476,
+            "psid": 6.89476,
+            "psia": 6.89476,
             "mmHg": 0.133322,
+            "STP": 101.325
         }
     },
     "flow": {
         "suffix": "cm_s",
         "units": {
             "cm/s": 1,
+            "cm/sec": 1,
             "m/s": 100,
+            "m/sec": 100,
             "mm/s": 0.1,
+            "mm/sec": 0.1,
+            "mm/sec": 0.1
         }
     },
     "spread_rate": {
         "suffix": "mm_s",
         "units": {
             "mm/s": 1,
+            "mm/sec": 1,
             "cm/s": 10,
+            "cm/sec": 10,
             "m/s": 1000,
+            "m/sec": 1000,
         }
     },
     "peak_heat_release_rate": {
