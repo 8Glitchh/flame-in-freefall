@@ -55,6 +55,40 @@ export default function App() {
     return () => window.removeEventListener("keydown", onKey);
   }, [room, go]);
 
+  useEffect(() => {
+    let timer = null;
+
+    function onMouseMove(e) {
+      const gap = 12;
+      let side = null;
+      if (e.clientX >= window.innerWidth - gap) side = "right";
+      else if (e.clientX <= gap) side = "left";
+      else if (e.clientY <= gap) side = "top";
+      else if (e.clientY >= window.innerHeight - gap) side = "bottom";
+
+      const arrow = arrows[room].find((a) => a.side === side);
+      if (!arrow || e.buttons) {
+        clearTimeout(timer);
+        timer = null;
+        return;
+      }
+      if (!timer) timer = setTimeout(() => go(arrow.to), 400);
+    }
+
+    function onLeave() {
+      clearTimeout(timer);
+      timer = null;
+    }
+
+    window.addEventListener("mousemove", onMouseMove);
+    document.addEventListener("mouseleave", onLeave);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener("mousemove", onMouseMove);
+      document.removeEventListener("mouseleave", onLeave);
+    };
+  }, [room, go]);
+
   return (
     <div className="relative h-full w-full overflow-hidden">
       <motion.div
