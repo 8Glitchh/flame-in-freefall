@@ -2,6 +2,8 @@ import { memo, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import Answer from "../components/Answer.jsx";
 import Story from "../components/Story.jsx";
+import FlameBall from "../components/FlameBall.jsx";
+import Segmented from "../components/Segmented.jsx";
 import MiniFlame from "../components/MiniFlame.jsx";
 import { fire } from "../components/Flame.jsx";
 import { pickCard, readScenario, setReply } from "../data/answers.js";
@@ -55,6 +57,7 @@ function Chat({ openScenario, scenario, applyScenario }) {
   const [chatId, setChatId] = useState(null);
   const [showChats, setShowChats] = useState(false);
   const [offer, setOffer] = useState(null);
+  const [gravity, setGravity] = useState("In space");
 
   const scroller = useRef(null);
   const content = useRef(null);
@@ -149,9 +152,13 @@ function Chat({ openScenario, scenario, applyScenario }) {
   }
 
   const size = buttonSize(o2, psi);
+  const last = messages[messages.length - 1];
+  const calm = Boolean(offer) || (last && last.role === "story");
 
   return (
     <div className="relative flex h-full flex-col items-center px-6 pb-7 pt-20">
+      <FlameBall o2={o2} psi={psi} space={gravity === "In space"} flare={flare} calm={calm} home={messages.length === 0} />
+
       <button className="travel" onClick={() => setShowChats(!showChats)}>
         Chats
       </button>
@@ -199,13 +206,21 @@ function Chat({ openScenario, scenario, applyScenario }) {
         )}
       </AnimatePresence>
 
-      <div ref={scroller} onScroll={onScroll} className="chat-scroll flex w-full max-w-[760px] flex-1 flex-col overflow-y-auto">
+      <div ref={scroller} onScroll={onScroll} className="chat-scroll relative z-10 flex w-full max-w-[760px] flex-1 flex-col overflow-y-auto">
         <AnimatePresence>
           {messages.length === 0 ? (
             <motion.div key="hello" exit={{ opacity: 0, y: -12 }} className="m-auto text-center">
               <h1 className="arrive text-[40px] font-semibold leading-[1.1] tracking-[-0.8px]">
                 How does fire behave <span className="text-[var(--fg-2)]">without gravity?</span>
               </h1>
+              <div className="arrive mx-auto mt-6 w-[220px]">
+                <Segmented options={["In space", "On Earth"]} value={gravity} onChange={setGravity} />
+              </div>
+              <p className="arrive label mx-auto mt-3 max-w-[340px]">
+                {gravity === "In space"
+                  ? "No gravity means hot gas can't rise, so the flame becomes a dim blue ball."
+                  : "On Earth hot gas rises and pulls the flame into a bright teardrop."}
+              </p>
             </motion.div>
           ) : (
             <div ref={content} className="flex flex-col gap-7 pb-6 pt-6">
@@ -241,7 +256,7 @@ function Chat({ openScenario, scenario, applyScenario }) {
         </AnimatePresence>
       </div>
 
-      <div className="relative w-full max-w-[760px]">
+      <div className="relative z-10 w-full max-w-[760px]">
         <AnimatePresence>
           {offer && (
             <motion.div

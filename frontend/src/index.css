@@ -406,6 +406,65 @@ button.row:hover {
   color: var(--blue);
 }
 
+.flame-bg {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.flame-center {
+  position: absolute;
+  top: 46%;
+  left: 50%;
+  width: 0;
+  height: 0;
+}
+.flame-center > div {
+  position: absolute;
+}
+.flame-sphere,
+.flame-drop {
+  position: absolute;
+  left: 0;
+  top: 0;
+  translate: -50% -50%;
+  filter: blur(14px);
+}
+.flame-sphere {
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgba(255, 150, 60, var(--soot)) 0%,
+    rgba(40, 90, 255, 0.04) 35%,
+    rgba(70, 150, 255, 0.22) 52%,
+    rgba(120, 190, 255, 0.32) 60%,
+    rgba(40, 100, 255, 0.1) 67%,
+    transparent 72%
+  );
+}
+.flame-drop {
+  border-radius: 50% 50% 50% 50% / 62% 62% 38% 38%;
+  transform-origin: 50% 85%;
+  background: radial-gradient(
+    ellipse at 50% 72%,
+    rgba(255, 245, 210, 0.45) 0%,
+    rgba(255, 170, 50, 0.32) 30%,
+    rgba(255, 100, 30, 0.14) 55%,
+    transparent 72%
+  );
+}
+.flame-dot {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(150, 200, 255, 0.9);
+  box-shadow: 0 0 8px rgba(100, 170, 255, 0.9);
+}
+.flame-dot.earth {
+  background: rgba(255, 190, 110, 0.9);
+  box-shadow: 0 0 8px rgba(255, 140, 50, 0.9);
+}
+
 .composer {
   display: flex;
   align-items: center;
