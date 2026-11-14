@@ -195,7 +195,7 @@ def rank(scenario: Scenario):
 class Question(BaseModel):
     question: str
     shown: list[str] = []
-
+    thinking: str | None = None
 
 def first_passage(sources):
     text = sources[0]["text"]
@@ -218,7 +218,7 @@ def load_index():
 
 @app.post("/ask")
 def ask(q: Question):
-    result = rag.ask(q.question)
+    result = rag.ask(q.question, thinking=q.thinking)
     if result["mode"] == "refused":
         return {"answer": result["answer"], "citations": [], "mode": "refused", "cited": [], "story": None}
     citations = [{"doc": s["document"], "pages": s["pages"]} for s in result["sources"]]
