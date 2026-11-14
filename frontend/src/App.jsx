@@ -55,6 +55,41 @@ export default function App() {
     return () => window.removeEventListener("keydown", onKey);
   }, [room, go]);
 
+  useEffect(() => {
+    const EDGE_THRESHOLD = 12;
+  
+    function onMouseMove(e) {
+      const { innerWidth, innerHeight } = window;
+  
+      if (room === "chat") {
+        if (e.clientX >= innerWidth - EDGE_THRESHOLD) {
+          go("dashboard");
+        } else if (e.clientY <= EDGE_THRESHOLD) {
+          go("space");
+        }
+      }
+  
+      if (room === "dashboard") {
+        if (e.clientX <= EDGE_THRESHOLD) {
+          go("chat");
+        }
+      }
+  
+      if (room === "space") {
+        if (e.clientY >= innerHeight - EDGE_THRESHOLD) {
+          go("chat");
+        }
+      }
+    }
+  
+    window.addEventListener("mousemove", onMouseMove);
+  
+    return () => {
+      window.removeEventListener("mousemove", onMouseMove);
+    };
+
+  }, [room, go]);
+
   return (
     <div className="relative h-full w-full overflow-hidden">
       <motion.div
