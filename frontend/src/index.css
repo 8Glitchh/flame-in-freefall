@@ -794,6 +794,52 @@ table.data tr:hover td {
 .composer input::placeholder {
   color: var(--fg-3);
 }
+.think {
+  padding: 6px 10px;
+  border-radius: 999px;
+  color: var(--fg-3);
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+  transition: background-color 0.2s, color 0.2s;
+}
+.think:hover {
+  background: var(--card-2);
+  color: var(--fg-2);
+}
+.think-menu {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 14px);
+  z-index: 30;
+  width: 210px;
+  padding: 6px;
+  border-radius: 14px;
+  background: var(--card-2);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+  transform-origin: bottom right;
+}
+.think-item {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-size: 14px;
+  text-align: left;
+  transition: background-color 0.15s;
+}
+.think-item:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+.think-item.on {
+  color: var(--blue);
+}
+.think-note {
+  color: var(--fg-3);
+  font-size: 12px;
+}
+
 .flame-send {
   position: relative;
   flex-shrink: 0;

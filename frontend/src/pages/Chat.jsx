@@ -18,10 +18,17 @@ function isQuestion(text) {
   return /\?|^(what|how|why|is|was|does|do|can|which|when)\b/i.test(text);
 }
 
-async function getReply(text, changes, scenario, shown) {
+const levels = [
+  { id: "", name: "Default", note: "The model decides" },
+  { id: "low", name: "Low", note: "Fastest answers" },
+  { id: "medium", name: "Medium", note: "Balanced" },
+  { id: "high", name: "High", note: "Most careful, slower" },
+];
+
+async function getReply(text, changes, scenario, shown, thinking) {
   if (changes && !isQuestion(text)) return setReply({ ...scenario, ...changes });
   try {
-    const data = await askBackend(text, shown);
+    const data = await askBackend(text, shown, thinking);
     const citations = data.citations.map((c) => ({
       name: c.doc.replace(/\.\w+$/, ""),
       ref: c.pages.length ? "p. " + c.pages.join(", ") : "data table",
@@ -58,6 +65,8 @@ function Chat({ openScenario, scenario, applyScenario, prompt }) {
   const [showChats, setShowChats] = useState(false);
   const [offer, setOffer] = useState(null);
   const [gravity, setGravity] = useState("In space");
+  const [thinking, setThinking] = useState("");
+  const [showLevels, setShowLevels] = useState(false);
 
   const scroller = useRef(null);
   const content = useRef(null);
@@ -148,7 +157,7 @@ function Chat({ openScenario, scenario, applyScenario, prompt }) {
     if (changes) applyScenario(changes);
 
     const shown = messages.filter((m) => m.story).map((m) => m.story.id);
-    getReply(text, changes, scenario, shown).then((reply) => {
+    getReply(text, changes, scenario, shown, thinking).then((reply) => {
       setMessages((old) => [...old, { role: "ai", ...reply }]);
       setBusy(false);
       if (reply.story) setTimeout(() => setOffer(reply.story), 1500);
@@ -291,6 +300,37 @@ function Chat({ openScenario, scenario, applyScenario, prompt }) {
           }}
         >
           <input value={input} onChange={(e) => setInput(e.target.value)} placeholder="Ask about flammability, smoke, oxygen, a test…" />
+          <div className="relative">
+            <button type="button" className="think" onClick={() => setShowLevels(!showLevels)}>
+              Thinking: {levels.find((l) => l.id === thinking).name}
+            </button>
+            <AnimatePresence>
+              {showLevels && (
+                <motion.div
+                  className="think-menu"
+                  initial={{ opacity: 0, y: 6, scale: 0.98 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 4, transition: { duration: 0.12 } }}
+                  transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                >
+                  {levels.map((l) => (
+                    <button
+                      type="button"
+                      key={l.name}
+                      className={l.id === thinking ? "think-item on" : "think-item"}
+                      onClick={() => {
+                        setThinking(l.id);
+                        setShowLevels(false);
+                      }}
+                    >
+                      <span>{l.name}</span>
+                      <span className="think-note">{l.note}</span>
+                    </button>
+                  ))}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
           <motion.button
             type="submit"
             disabled={!input.trim() || busy}
