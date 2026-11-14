@@ -88,8 +88,7 @@ def experiment(psi_id: str):
     for inv in INVESTIGATIONS:
         if inv["psi_id"].lower() == psi_id.lower() or inv["acronym"].lower() == psi_id.lower():
             tests = [t for t in TESTS if t["psi_id"] == inv["psi_id"]]
-            name = inv["acronym"].split()[0].lower()
-            findings = [f for f in FINDINGS if f["investigation"].lower() in name or name in f["investigation"].lower()]
+            findings = [f for f in FINDINGS if f["psi_id"] == inv["psi_id"]]
             return {**inv, "tests": [clean(t) for t in tests], "findings": findings}
     raise HTTPException(404, "Experiment not found")
 
@@ -120,10 +119,13 @@ def tests(o2_min: float = 0, o2_max: float = 100, psi_min: float = 0, psi_max: f
 
 
 @app.get("/findings")
-def findings(theme: str = "", investigation: str = ""):
+def findings(theme: str = "", investigation: str = "", featured: bool = False):
     result = []
     for f in FINDINGS:
-        if theme and f["safety_theme"].lower() != theme.lower():
+        themes = [t.strip() for t in f["safety_theme"].lower().split(",")]
+        if theme and theme.lower() not in themes:
+            continue
+        if featured and f["dashboard_featured"] != "true":
             continue
         if investigation and investigation.lower() not in f["investigation"].lower():
             continue
