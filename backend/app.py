@@ -35,8 +35,7 @@ def number(text):
 
 TESTS = read_csv(DATA / "psi_tests_clean.csv")
 INVESTIGATIONS = read_csv(DATA / "investigations.csv")
-FINDINGS = read_csv(DATA / "findings" / "extraction_results.csv")
-
+FINDINGS = read_csv(DATA / "findings" / "psi_findings_source_checked.csv")
 
 def load_saffire():
     saffire = []
