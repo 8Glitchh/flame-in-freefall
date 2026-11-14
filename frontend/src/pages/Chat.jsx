@@ -20,8 +20,8 @@ async function getReply(text, changes, scenario) {
   try {
     const data = await askBackend(text);
     const citations = data.citations.map((c) => ({
-      name: c.doc.replace(".pdf", ""),
-      ref: "p. " + c.pages.join(", "),
+      name: c.doc.replace(/\.\w+$/, ""),
+      ref: c.pages.length ? "p. " + c.pages.join(", ") : "data table",
     }));
     return { text: data.answer, citations, card: pickCard(text) };
   } catch {
