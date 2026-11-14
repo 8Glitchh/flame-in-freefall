@@ -60,19 +60,53 @@ export default function App() {
 
     function onMouseMove(e) {
       const gap = 12;
-      let side = null;
-      if (e.clientX >= window.innerWidth - gap) side = "right";
-      else if (e.clientX <= gap) side = "left";
-      else if (e.clientY <= gap) side = "top";
-      else if (e.clientY >= window.innerHeight - gap) side = "bottom";
+      let side = null, special = null;
 
-      const arrow = arrows[room].find((a) => a.side === side);
-      if (!arrow || e.buttons) {
+      const { innerWidth, innerHeight } = window;
+
+      if (room === "chat") {
+        if (e.clientX >= innerWidth - gap) {
+          side = "right";
+        } else if (e.clientY <= gap) {
+          side = "top";
+        }
+      }
+      
+      if (room === "dashboard") {
+        if (e.clientX <= gap && e.clientY <= gap) {
+          side = "top";
+          special = "space";
+        } else if (e.clientX <= gap) {
+          side = "left";
+        }
+      }
+      
+      if (room === "space") {
+        if (
+          e.clientX >= innerWidth - gap &&
+          e.clientY >= innerHeight - gap
+        ) {
+          side = "bottom";
+          special = "dashboard";
+        } else if (e.clientY >= innerHeight - gap) {
+          side = "bottom";
+        }
+      }
+
+      let arrow = arrows[room].find((a) => a.side === side);
+      if ((!arrow && !special) || e.buttons) {
         clearTimeout(timer);
         timer = null;
         return;
       }
-      if (!timer) timer = setTimeout(() => go(arrow.to), 400);
+
+      if (!timer) timer = setTimeout(() => {
+        if(special){
+          go(special);
+        }else{
+          go(arrow.to);
+        }
+      }, 400);
     }
 
     function onLeave() {
