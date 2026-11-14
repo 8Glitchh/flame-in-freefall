@@ -170,7 +170,10 @@ class Question(BaseModel):
 def write_answer(question, passages):
     key = os.environ.get("GROQ_API_KEY")
     if not key:
-        first = passages[0]["text"].split(". ")
+        text = passages[0]["text"]
+        if text.startswith("Finding (") and "finding: " in text:
+            text = text.split("finding: ", 1)[1].split("; ")[0]
+        first = text.split(". ")
         return ". ".join(first[:2]).rstrip(".") + ". [1]"
 
     sources = "\n\n".join(f"[{i}] {p['text']}" for i, p in enumerate(passages, 1))
