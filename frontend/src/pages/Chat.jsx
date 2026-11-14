@@ -48,7 +48,7 @@ function when(time) {
   return date.toLocaleDateString([], { month: "short", day: "numeric" });
 }
 
-function Chat({ openScenario, scenario, applyScenario }) {
+function Chat({ openScenario, scenario, applyScenario, prompt }) {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
@@ -128,8 +128,12 @@ function Chat({ openScenario, scenario, applyScenario }) {
     lastTop.current = el.scrollTop;
   }
 
-  function send() {
-    const text = input.trim();
+  useEffect(() => {
+    if (prompt) send(prompt.text);
+  }, [prompt]);
+
+  function send(asked) {
+    const text = (asked || input).trim();
     if (!text || busy) return;
 
     const changes = readScenario(text);

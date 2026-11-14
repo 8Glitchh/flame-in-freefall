@@ -39,6 +39,15 @@ export default function App() {
     }
   });
 
+  const [prompt, setPrompt] = useState(null);
+
+  const askInChat = useCallback((text) => {
+    setPrompt({ text, id: Date.now() });
+    setRoom("chat");
+  }, []);
+
+  const openGuide = useCallback(() => setGuide(true), []);
+
   function closeGuide() {
     setGuide(false);
     try {
@@ -147,10 +156,10 @@ export default function App() {
         transition={{ type: "spring", stiffness: 240, damping: 34, mass: 0.9 }}
       >
         <section className="absolute inset-0">
-          <Chat openScenario={openScenario} scenario={scenario} applyScenario={applyScenario} />
+          <Chat openScenario={openScenario} scenario={scenario} applyScenario={applyScenario} prompt={prompt} />
         </section>
         <section className="absolute inset-0" style={{ transform: "translateX(100vw)" }}>
-          <Dashboard scenario={scenario} setScenario={setScenario} />
+          <Dashboard scenario={scenario} setScenario={setScenario} openGuide={openGuide} askInChat={askInChat} />
         </section>
         <section className="absolute inset-0" style={{ transform: "translateY(-100vh)" }}>
           {seen3d && <View3D active={room === "space"} />}
