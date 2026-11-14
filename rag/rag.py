@@ -10,7 +10,7 @@ from pathlib import Path
 
 import numpy as np
 import pymupdf
-from sentence_transformers import SentenceTransformer
+from sentence_transformers import CrossEncoder, SentenceTransformer
 
 HERE = Path(__file__).resolve().parent
 DATA = HERE.parent / "data"
@@ -18,6 +18,7 @@ TESTS_CSV = DATA / "psi_tests_clean.csv"
 CACHE = HERE / ".cache"
 MAX_TOKENS = 220
 EMBED_MODEL = "BAAI/bge-small-en-v1.5"
+RERANK_MODEL = "cross-encoder/ms-marco-MiniLM-L-6-v2"
 QUERY_PREFIX = "Represent this sentence for searching relevant passages: "
 RRF_K = 60
 KEYWORD_WEIGHT = 0.5
@@ -28,6 +29,9 @@ OTHER_EXPERIMENT_PENALTY = 0.005
 TEST_ID_BOOST = 0.02
 SUMMARY_BOOST = 0.03
 SPEC_PENALTY = 0.006
+RERANK_TOP = 30
+RERANK_BONUS = 2.0
+MAX_PER_DOCUMENT = 2
 
 SPEC_FILE = re.compile(r"SRD|ISRD|SORD|SCR|Requirements|Operations_Manual|DoD|DLD|Concept_Description|"
                        r"data_file_description", re.I)
@@ -536,6 +540,11 @@ class Index:
         self.chunks = chunks
         self.bm25 = BM25(chunks)
         self.dense = Dense(chunks)
+        try:
+            self.reranker = CrossEncoder(RERANK_MODEL, max_length=512)
+        except Exception as e:
+            print(f"reranker off ({e})")
+            self.reranker = None
 
 
 def ranks(scores, only_positive=False):
@@ -580,26 +589,59 @@ def search(question, k=6, experiment=None):
         if table_question:
             candidates += [i for i in inside if chunks[i]["kind"] == "table_summary"]
 
-    scored = {}
-    for i in candidates:
+    scored = []
+    for i in dict.fromkeys(candidates):
         c = chunks[i]
         if experiment and experiment not in c["experiments"]:
             continue
         about = bool(named & set(c["experiments"]))
         s = fused.get(i, 0)
+        bonus = 0
         if named and about:
             s += EXPERIMENT_BOOST
+            bonus += 1
         elif named and c["experiments"]:
             s -= OTHER_EXPERIMENT_PENALTY
         if ids and mentions_id(c, ids):
             s += TEST_ID_BOOST
+            bonus += 1
         if table_question and not ids and about and c["kind"] == "table_summary":
             s += SUMMARY_BOOST
+            bonus += 1
         if c["kind"] == "spec" and not spec_question:
             s -= SPEC_PENALTY
-        scored[i] = s
-    best = sorted(scored, key=lambda i: -scored[i])
-    return [chunks[i] for i in best[:k]]
+            bonus -= 1
+        scored.append((i, s, bonus))
+    scored.sort(key=lambda x: -x[1])
+    scored = rerank(question, scored, chunks, index.reranker)
+    return diversify(scored, chunks, k)
+
+
+def rerank(question, scored, chunks, reranker):
+    if reranker is None or not scored:
+        return scored
+    top = scored[:RERANK_TOP]
+    pairs = [(question, header(chunks[i]) + "\n" + chunks[i]["text"]) for i, _, _ in top]
+    points = reranker.predict(pairs)
+    top = [(i, float(p) + RERANK_BONUS * bonus, bonus) for (i, _, bonus), p in zip(top, points)]
+    top.sort(key=lambda x: -x[1])
+    return top + scored[RERANK_TOP:]
+
+
+def diversify(scored, chunks, k):
+    results, per_kind, per_document = [], Counter(), Counter()
+    for i, _, _ in scored:
+        c = chunks[i]
+        if per_kind[(c["document"], c["kind"])] >= MAX_PER_DOCUMENT:
+            continue
+        if per_document[c["document"]] >= 2 * MAX_PER_DOCUMENT:
+            continue
+        per_kind[(c["document"], c["kind"])] += 1
+        per_document[c["document"]] += 1
+        results.append(c)
+        if len(results) == k:
+            break
+    return results
 
 
 def evaluate(path=HERE / "eval_questions.json"):
