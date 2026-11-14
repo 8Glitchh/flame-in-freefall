@@ -29,16 +29,36 @@ async function getReply(text, changes, scenario) {
   }
 }
 
+function loadChats() {
+  try {
+    return JSON.parse(localStorage.getItem("chats")) || [];
+  } catch {
+    return [];
+  }
+}
+
+function when(time) {
+  const date = new Date(time);
+  if (date.toDateString() === new Date().toDateString()) {
+    return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  }
+  return date.toLocaleDateString([], { month: "short", day: "numeric" });
+}
+
 function Chat({ openScenario, scenario, applyScenario }) {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
   const [flare, setFlare] = useState(0);
+  const [chats, setChats] = useState(loadChats);
+  const [chatId, setChatId] = useState(null);
+  const [showChats, setShowChats] = useState(false);
 
   const scroller = useRef(null);
   const content = useRef(null);
   const followBottom = useRef(true);
   const lastTop = useRef(0);
+  const unsaved = useRef(false);
 
   const typed = readScenario(input);
   const o2 = typed && typed.o2 ? typed.o2 : scenario.o2;
@@ -54,6 +74,38 @@ function Chat({ openScenario, scenario, applyScenario }) {
     observer.observe(content.current);
     return () => observer.disconnect();
   }, [messages.length > 0]);
+
+  useEffect(() => {
+    if (!unsaved.current || busy) return;
+    unsaved.current = false;
+    const chat = { id: chatId, title: messages[0].text, time: Date.now(), messages };
+    saveChats([chat, ...chats.filter((c) => c.id !== chatId)]);
+  }, [messages, busy]);
+
+  function saveChats(list) {
+    setChats(list);
+    localStorage.setItem("chats", JSON.stringify(list));
+  }
+
+  function openChat(chat) {
+    if (busy) return;
+    setMessages(chat.messages.map((m) => ({ ...m, old: true })));
+    setChatId(chat.id);
+    setShowChats(false);
+    followBottom.current = true;
+  }
+
+  function newChat() {
+    if (busy) return;
+    setMessages([]);
+    setChatId(null);
+    setShowChats(false);
+  }
+
+  function deleteChat(id) {
+    saveChats(chats.filter((c) => c.id !== id));
+    if (id === chatId) newChat();
+  }
 
   function onScroll() {
     const el = scroller.current;
@@ -71,6 +123,8 @@ function Chat({ openScenario, scenario, applyScenario }) {
     setBusy(true);
     setFlare(flare + 1);
     followBottom.current = true;
+    unsaved.current = true;
+    if (!chatId) setChatId(Date.now());
     setMessages((old) => [...old, { role: "user", text }]);
     if (changes) applyScenario(changes);
 
@@ -83,7 +137,54 @@ function Chat({ openScenario, scenario, applyScenario }) {
   const size = buttonSize(o2, psi);
 
   return (
-    <div className="flex h-full flex-col items-center px-6 pb-7 pt-20">
+    <div className="relative flex h-full flex-col items-center px-6 pb-7 pt-20">
+      <button className="travel" onClick={() => setShowChats(!showChats)}>
+        Chats
+      </button>
+
+      <AnimatePresence>
+        {showChats && (
+          <motion.div
+            key="backdrop"
+            className="chats-backdrop"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setShowChats(false)}
+          />
+        )}
+        {showChats && (
+          <motion.div
+            key="chats"
+            className="chats"
+            initial={{ opacity: 0, x: -12, scale: 0.98 }}
+            animate={{ opacity: 1, x: 0, scale: 1 }}
+            exit={{ opacity: 0, x: -12, scale: 0.98, transition: { duration: 0.15 } }}
+            transition={{ type: "spring", stiffness: 320, damping: 30 }}
+          >
+            <button className="chats-new" onClick={newChat}>
+              New chat
+            </button>
+            {chats.length === 0 && <p className="chats-empty">No saved chats yet</p>}
+            {chats.map((c) => (
+              <div key={c.id} className={c.id === chatId ? "chats-item active" : "chats-item"} onClick={() => openChat(c)}>
+                <span className="chats-title">{c.title}</span>
+                <span className="chats-time">{when(c.time)}</span>
+                <button
+                  className="chats-delete"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    deleteChat(c.id);
+                  }}
+                >
+                  Delete
+                </button>
+              </div>
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <div ref={scroller} onScroll={onScroll} className="chat-scroll flex w-full max-w-[760px] flex-1 flex-col overflow-y-auto">
         <AnimatePresence>
           {messages.length === 0 ? (

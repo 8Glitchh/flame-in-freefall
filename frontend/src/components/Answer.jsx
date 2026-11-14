@@ -4,7 +4,7 @@ import { AlarmCard, NoDataCard, RankCard } from "./ChatCards.jsx";
 
 export default function Answer({ msg, openScenario }) {
   const words = msg.text.split(" ");
-  const [shown, setShown] = useState(0);
+  const [shown, setShown] = useState(msg.old ? words.length : 0);
   const done = shown >= words.length;
 
   useEffect(() => {
