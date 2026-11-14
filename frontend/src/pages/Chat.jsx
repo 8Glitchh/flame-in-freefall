@@ -3,7 +3,7 @@ import { AnimatePresence, motion } from "motion/react";
 import Answer from "../components/Answer.jsx";
 import MiniFlame from "../components/MiniFlame.jsx";
 import { fire } from "../components/Flame.jsx";
-import { ask, pickCard, readScenario, setReply } from "../data/answers.js";
+import { pickCard, readScenario, setReply } from "../data/answers.js";
 import { askBackend } from "../api.js";
 
 function buttonSize(o2, psi) {
@@ -25,7 +25,7 @@ async function getReply(text, changes, scenario) {
     }));
     return { text: data.answer, citations, card: pickCard(text) };
   } catch {
-    return ask(text);
+    return { text: "Chat couldn’t load an answer. Please try again.", citations: [] };
   }
 }
 
