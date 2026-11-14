@@ -1,7 +1,6 @@
 import csv
 import hashlib
 import json
-import logging
 import math
 import os
 import re
@@ -16,6 +15,8 @@ from pathlib import Path
 import numpy as np
 import pymupdf
 from sentence_transformers import CrossEncoder, SentenceTransformer
+
+THINKING_LEVELS = ("low", "medium", "high")
 
 HERE = Path(__file__).resolve().parent
 DATA = HERE.parent / "data"
@@ -691,22 +692,21 @@ def load_env():
                     os.environ[m.group(1)] = m.group(2).strip('"').strip("'")
 
 
-def call_llm(question, sources):
+def call_llm(question, sources, thinking=None):
     passages = "\n\n".join(f"[{s['n']}] ({s['label']})\n{s['text']}" for s in sources)
-    body = json.dumps({"model": os.getenv("LLM_MODEL"), "temperature": 0,
-                       "messages": [{"role": "system", "content": SYSTEM},
-                                    {"role": "user", "content": f"QUESTION: {question}\n\nPASSAGES:\n{passages}"}]})
+    payload = {"model": os.getenv("LLM_MODEL"), "temperature": 0,
+               "messages": [{"role": "system", "content": SYSTEM},
+                            {"role": "user", "content": f"QUESTION: {question}\n\nPASSAGES:\n{passages}"}]}
+    if thinking in THINKING_LEVELS:
+        payload["reasoning_effort"] = thinking
     base = os.getenv("LLM_BASE_URL", "").rstrip("/")
-    request = urllib.request.Request(base + "/chat/completions", data=body.encode("utf-8"), headers={
+    request = urllib.request.Request(base + "/chat/completions", data=json.dumps(payload).encode("utf-8"), headers={
         "Content-Type": "application/json", "Authorization": f"Bearer {os.getenv('LLM_API_KEY', '')}"})
-    with urllib.request.urlopen(request, timeout=10) as response:
-        content = json.loads(response.read())["choices"][0]["message"]["content"]
-    if not isinstance(content, str) or not content.strip():
-        raise ValueError("Provider returned an empty answer")
-    return content.strip()
+    with urllib.request.urlopen(request, timeout=60 if thinking == "high" else 20) as response:
+        return json.loads(response.read())["choices"][0]["message"]["content"].strip()
 
 
-def ask(question, experiment=None, use_llm=True):
+def ask(question, experiment=None, use_llm=True, thinking=None):
     hits = search(question, experiment=experiment)
     named = experiments_in(question)
     cover = coverage(question, hits)
@@ -724,12 +724,16 @@ def ask(question, experiment=None, use_llm=True):
     load_env()
     if not (use_llm and os.getenv("LLM_MODEL") and os.getenv("LLM_API_KEY")):
         return result
-    try:
-        text = call_llm(question, sources)
-    except (OSError, KeyError, IndexError, TypeError, ValueError) as error:
-        reason = f"HTTP {error.code}" if isinstance(error, urllib.error.HTTPError) else type(error).__name__
-        logging.getLogger(__name__).warning("LLM request failed (%s)", reason)
-        result["error"] = "The AI couldn't generate an answer. Here's the closest source excerpt."
+    text, error = None, None
+    for attempt in range(3):
+        try:
+            text = call_llm(question, sources, thinking)
+            break
+        except (urllib.error.URLError, KeyError, TimeoutError, ValueError) as e:
+            error = e
+            time.sleep(3 * (attempt + 1))
+    if text is None:
+        result["error"] = f"AI call failed ({error}), showing passages only."
         return result
 
     valid = {str(s["n"]) for s in sources}
@@ -845,4 +849,3 @@ if __name__ == "__main__":
         print("\nsaved answers.md")
     else:
         evaluate()
-
