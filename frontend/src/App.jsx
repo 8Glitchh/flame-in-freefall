@@ -94,7 +94,7 @@ export default function App() {
       }
 
       let arrow = arrows[room].find((a) => a.side === side);
-      if ((!arrow || e.buttons) && !special) {
+      if ((!arrow && !special) || e.buttons) {
         clearTimeout(timer);
         timer = null;
         return;
