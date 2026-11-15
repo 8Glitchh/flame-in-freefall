@@ -1,4 +1,4 @@
-# Flame in Freefall
+# Afterburn
 
 **Ask NASA's fire experiments anything. Every answer cited.**
 
@@ -6,7 +6,7 @@ Team **Glitxh** · NASA International Space Apps Challenge 2026 · *Flame in Fre
 
 Fire behaves very differently in space. Without gravity, hot gas does not rise, so a candle flame becomes a dim blue ball instead of a yellow teardrop. NASA has studied this for decades on the Space Shuttle, Mir, the ISS and Cygnus cargo ships, but the results are spread across hundreds of documents, test tables and papers.
 
-How does a flame behave when buoyancy-driven convection is reduced? Which spacecraft fire tests best match a given oxygen level and cabin pressure? Flame in Freefall brings NASA experiment records, interactive charts, and a chat assistant with citations into one workspace: a chat that answers only from NASA's own data with citations to the exact paper and page, a dashboard that matches Moon and Mars habitat atmospheres to real NASA fire tests, and a 3D view of every test.
+How does a flame behave when buoyancy-driven convection is reduced? Which spacecraft fire tests best match a given oxygen level and cabin pressure? Afterburn brings NASA experiment records, interactive charts, and a chat assistant with citations into one workspace: a chat that answers only from NASA's own data with citations to the exact paper and page, a dashboard that matches Moon and Mars habitat atmospheres to real NASA fire tests, and a 3D view of every test.
 
 [Features](#features) · [Architecture](#architecture) · [Install](#install-and-run) · [Tutorial](#tutorial) · [Data](#data-and-provenance) · [API](#api-reference) · [Sources](SOURCES.md)
 
@@ -18,7 +18,7 @@ How does a flame behave when buoyancy-driven convection is reduced? Which spacec
 
 ## Screenshots
 
-Explore the main features of **Flame in Freefall** through the screenshots below.
+Explore the main features of **Afterburn** through the screenshots below.
 
 ### 1. Chat - Ask NASA's Fire Experiments
 
