@@ -47,6 +47,7 @@ Every data source, resource and tool used in Flame in Freefall (Team Glitxh, NAS
 | NASA Spinoff: PBI fire resistant fiber | https://spinoff.nasa.gov/node/10564 |
 | NASA White Sands: Flammability testing | https://www.nasa.gov/centers-and-facilities/white-sands/flammability |
 | NASA Technology Transfer: NASA technology fights wildfires | https://technology.nasa.gov/nasa-technology-fights-wildfires |
+| Urban et al., Heat and Smoke Emission from Tests on the SAFFIRE IV-VI Experiments, ICES-2026-577, 55th International Conference on Environmental Systems (NASA Glenn Research Center) | https://www.researchgate.net/profile/Sandra-Olson |
 | NASA Glenn: Flammability Limits at Reduced-g Experiment (FLARE) | https://www.nasa.gov/glenn/glenn-expertise-space-exploration/physical-sciences-program/combustion-science/flammability-limits-at-reduced-g-experiment-flare/ |
 
 ## Space agency partner data
