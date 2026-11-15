@@ -16,6 +16,39 @@ How does a flame behave when buoyancy-driven convection is reduced? Which spacec
 
 ---
 
+## Screenshots
+
+Explore the main features of **Flame in Freefall** through the screenshots below.
+
+### 1. Chat - Ask NASA's Fire Experiments
+
+Ask questions about NASA's fire experiments and receive evidence-based answers with citations to the original documents and page numbers.
+
+![Chat interface](screenshots/chat.png)
+
+### 2. Dashboard - Explore Fire Tests
+
+The interactive dashboard lets you investigate NASA fire experiments under different atmospheric conditions.
+
+| Dashboard | Map & Atmosphere |
+|:---:|:---:|
+| ![Dashboard](screenshots/dashboard-ranking.png) | ![Map](screenshots/dashboard-map.png) |
+| Explore the dashboard to investigate and compare NASA fire experiments. | Visualize and compare test conditions across different oxygen and pressure levels. |
+
+### 3. 3D View - Visualize Fire Experiments
+
+Explore Saffire experiments in an interactive 3D environment. Each test is positioned by oxygen concentration, cabin pressure and peak carbon monoxide increase.
+
+![3D visualization](screenshots/3d-view.png)
+
+### 4. Interactive Tutorial - A Guided Tour
+
+Follow the built-in tutorial to discover the application's features, learn how to ask research questions, explore the dashboard and understand how to interpret experimental results.
+
+![Interactive tutorial](screenshots/tutorial.png)
+
+---
+
 ## Features
 
 ### Chat: cited answers from NASA data
