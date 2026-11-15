@@ -430,7 +430,7 @@ def load_file(path):
         return load_investigations(path)
     if path.parent.name == "findings" and path.suffix == ".csv":
         return load_findings(path)
-    if path.name == "background.md":
+    if path.name in ("background.md", "partners.md"):
         return load_markdown(path)
     if "papers" in path.parts:
         if path.suffix == ".pdf":

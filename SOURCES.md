@@ -47,6 +47,15 @@ Every data source, resource and tool used in Flame in Freefall (Team Glitxh, NAS
 | NASA Spinoff: PBI fire resistant fiber | https://spinoff.nasa.gov/node/10564 |
 | NASA White Sands: Flammability testing | https://www.nasa.gov/centers-and-facilities/white-sands/flammability |
 | NASA Technology Transfer: NASA technology fights wildfires | https://technology.nasa.gov/nasa-technology-fights-wildfires |
+| NASA Glenn: Flammability Limits at Reduced-g Experiment (FLARE) | https://www.nasa.gov/glenn/glenn-expertise-space-exploration/physical-sciences-program/combustion-science/flammability-limits-at-reduced-g-experiment-flare/ |
+
+## Space agency partner data
+
+| Resource | Link |
+|---|---|
+| JAXA: FLARE (Flammability Limits at Reduced-g Experiment) | https://humans-in-space.jaxa.jp/en/biz-lab/experiment/theme/detail/000807.html |
+| JAXA: Group Combustion experiment (DARTS archive) | https://legacy.darts.isas.jaxa.jp/app/kibo-pm-experiments/experiment/combustion/gc |
+| ESA: No fire in the sky | https://www.esa.int/Enabling_Support/Space_Engineering_Technology/No_fire_in_the_sky_preventing_an_astronaut_s_worst_nightmare |
 
 ## Other data, resources and tools
 

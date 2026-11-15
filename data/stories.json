@@ -364,5 +364,37 @@
       "name": "NASA: The flame of discovery grows as Saffire sets new fires in space",
       "url": "https://nasa.gov/feature/glenn/2020/the-flame-of-discovery-grows-as-saffire-sets-new-fires-in-space"
     }
+  },
+  {
+    "id": "flare",
+    "title": "Japan is building a new fire test for space",
+    "story": "Every material that flies to the ISS is checked with a fire test done in normal Earth gravity. JAXA's FLARE experiment, run with NASA and ESA on Japan's Kibo module, burns spacecraft materials in real microgravity at oxygen levels up to about 45 percent.",
+    "lesson": "The goal is to predict from simple tests on Earth the lowest oxygen level at which a material can still burn in space, giving a better way to screen materials than today's Earth gravity test. Work linked to FLARE already led to a new Japanese test standard in 2024.",
+    "data_says": "BASS notes that NASA's current material selection is based on a test that sorts materials by their behavior in normal gravity, without considering low gravity effects.",
+    "keywords": [
+      "flare",
+      "jaxa",
+      "japan",
+      "kibo",
+      "esa",
+      "limiting oxygen",
+      "oxygen index",
+      "flammability limit",
+      "standard",
+      "screening",
+      "6001",
+      "material selection"
+    ],
+    "experiments": [
+      "BASS",
+      "BASS-II",
+      "SAFFIRE-I",
+      "SAFFIRE-II",
+      "SAFFIRE-III"
+    ],
+    "source": {
+      "name": "NASA Glenn: Flammability Limits at Reduced-g Experiment (FLARE)",
+      "url": "https://www.nasa.gov/glenn/glenn-expertise-space-exploration/physical-sciences-program/combustion-science/flammability-limits-at-reduced-g-experiment-flare/"
+    }
   }
 ]
